@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Generated inputs and compiled binaries. Regenerate with `uv run mreplay generate`.
+data/synthetic/
+compiled/build/
+
+# Licensed market data stays out of Git. See docs/data_rights.md.
+data/licensed/

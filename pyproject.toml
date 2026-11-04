@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "marketreplay"
+version = "0.1.0"
+description = "Event replay engine and learned execution policy. Every order is simulated."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy==2.2.6",
+    "scikit-learn==1.6.1",
+]
+
+[project.scripts]
+mreplay = "marketreplay.cli:main"
+
+[dependency-groups]
+dev = ["pytest==8.4.1"]
+plots = ["matplotlib==3.10.3"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/marketreplay"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
