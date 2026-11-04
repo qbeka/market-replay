@@ -35,6 +35,7 @@ Failed experiments and the changes they caused, in order. All numbers come from 
 - **Setup:** first validation run of `fitted_q`, at 2.18 bps with 23.6% forced lots.
 - **Cause:** fitted Q-iteration ran 8 iterations with no discounting. Each one carries cost back one decision, and the horizon is 30 decisions, so most states never learned the deadline penalty. The behavior policy also crossed too often to reach deadlines.
 - **Change:** 30 iterations, and a lower range of behavior cross rates. Reporting the first version as "reinforcement learning lost" would have been unfair.
+- **After the fix:** p95 fell from 14.02 to 11.17 bps, but forced lots stayed at 20.9% and the mean stayed at 2.18 bps. It remains worse than the simple rules on validation days. It trained on 27,765 transitions with no tuning of its own, so treat this as one modest comparator, not a verdict on reinforcement learning.
 
 ## 6. The independent review found three biases before the freeze
 

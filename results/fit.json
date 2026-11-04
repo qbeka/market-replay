@@ -1,132 +1,132 @@
 {
   "adverse_selection_ticks": {
-    "move_after_fill": -0.38489814672997397,
-    "move_without_fill": 1.1255666364460561
+    "move_after_fill": -0.38541826554105907,
+    "move_without_fill": 1.1175675675675676
   },
-  "base_rate_brier": 0.19245850757564176,
-  "comparator_transitions": 22172,
+  "base_rate_brier": 0.19342818713143584,
+  "comparator_transitions": 27765,
   "fill_models": {
     "boosted": {
-      "brier": 0.1442994230283123,
+      "brier": 0.14443358648474608,
       "calibration": [
         {
           "count": 874,
-          "observed": 0.2402745995423341,
-          "predicted": 0.21229911712182217
+          "observed": 0.2242562929061785,
+          "predicted": 0.21869275256464546
         },
         {
           "count": 874,
-          "observed": 0.5366132723112128,
-          "predicted": 0.5357429846800997
+          "observed": 0.5594965675057209,
+          "predicted": 0.533240428131328
         },
         {
           "count": 874,
-          "observed": 0.6819221967963387,
-          "predicted": 0.6165458671354686
+          "observed": 0.6704805491990846,
+          "predicted": 0.6108675462756948
         },
         {
           "count": 874,
-          "observed": 0.7379862700228833,
-          "predicted": 0.6972123742880022
+          "observed": 0.7242562929061785,
+          "predicted": 0.6728307138600051
         },
         {
           "count": 874,
-          "observed": 0.7688787185354691,
-          "predicted": 0.7455314026845993
+          "observed": 0.7723112128146453,
+          "predicted": 0.7632117889706304
+        },
+        {
+          "count": 873,
+          "observed": 0.856815578465063,
+          "predicted": 0.8116026404268872
+        },
+        {
+          "count": 873,
+          "observed": 0.8591065292096219,
+          "predicted": 0.8537230961387365
+        },
+        {
+          "count": 873,
+          "observed": 0.8980526918671249,
+          "predicted": 0.9033626379597374
+        },
+        {
+          "count": 873,
+          "observed": 0.9209621993127147,
+          "predicted": 0.9405798754826473
+        },
+        {
+          "count": 873,
+          "observed": 0.9736540664375716,
+          "predicted": 0.9765804297041579
+        }
+      ],
+      "ece": 0.023045011848646667,
+      "trials": 12
+    },
+    "logistic": {
+      "brier": 0.1663061564079327,
+      "calibration": [
+        {
+          "count": 874,
+          "observed": 0.41647597254004576,
+          "predicted": 0.4212849994039956
+        },
+        {
+          "count": 874,
+          "observed": 0.5915331807780321,
+          "predicted": 0.5415649397121496
+        },
+        {
+          "count": 874,
+          "observed": 0.6498855835240275,
+          "predicted": 0.6098131360933838
+        },
+        {
+          "count": 874,
+          "observed": 0.717391304347826,
+          "predicted": 0.6753562151276142
+        },
+        {
+          "count": 874,
+          "observed": 0.7540045766590389,
+          "predicted": 0.7170335304631129
+        },
+        {
+          "count": 873,
+          "observed": 0.8041237113402062,
+          "predicted": 0.7822382821596674
+        },
+        {
+          "count": 873,
+          "observed": 0.8373424971363116,
+          "predicted": 0.8158176918819628
         },
         {
           "count": 873,
           "observed": 0.8442153493699885,
-          "predicted": 0.8077391848476735
+          "predicted": 0.8616013789953948
         },
         {
           "count": 873,
-          "observed": 0.865979381443299,
-          "predicted": 0.8544730630645285
+          "observed": 0.9072164948453608,
+          "predicted": 0.9126335613652934
         },
         {
           "count": 873,
-          "observed": 0.9003436426116839,
-          "predicted": 0.9144167457700999
-        },
-        {
-          "count": 873,
-          "observed": 0.9312714776632303,
-          "predicted": 0.9386603173980282
-        },
-        {
-          "count": 873,
-          "observed": 0.9679266895761741,
-          "predicted": 0.9772195578821699
+          "observed": 0.9369988545246277,
+          "predicted": 0.9496541207011864
         }
       ],
-      "ece": 0.023712617266654246,
-      "trials": 12
-    },
-    "logistic": {
-      "brier": 0.16544081075911996,
-      "calibration": [
-        {
-          "count": 874,
-          "observed": 0.41876430205949655,
-          "predicted": 0.42270617204156635
-        },
-        {
-          "count": 874,
-          "observed": 0.5835240274599542,
-          "predicted": 0.544811581133553
-        },
-        {
-          "count": 874,
-          "observed": 0.6510297482837528,
-          "predicted": 0.6160816795245919
-        },
-        {
-          "count": 874,
-          "observed": 0.7425629290617849,
-          "predicted": 0.6773154329272741
-        },
-        {
-          "count": 874,
-          "observed": 0.7448512585812357,
-          "predicted": 0.7145446096361505
-        },
-        {
-          "count": 873,
-          "observed": 0.8006872852233677,
-          "predicted": 0.7875427287636213
-        },
-        {
-          "count": 873,
-          "observed": 0.845360824742268,
-          "predicted": 0.8163805591709696
-        },
-        {
-          "count": 873,
-          "observed": 0.843069873997709,
-          "predicted": 0.8631208209446343
-        },
-        {
-          "count": 873,
-          "observed": 0.9060710194730813,
-          "predicted": 0.9115024881715689
-        },
-        {
-          "count": 873,
-          "observed": 0.9392898052691867,
-          "predicted": 0.9500117871029723
-        }
-      ],
-      "ece": 0.02515400297436972,
+      "ece": 0.025277881917279196,
       "trials": 12
     }
   },
   "fill_winner": "boosted",
-  "fitted_sha256": "a5d71931ac8fb80369fc9a4a56df60ded3533f7e3f97d1df533a21bdf866353c",
+  "fitted_sha256": "783531fcfd1a39723d1f51c42e5c236979ff5eac69a718a93459485af3fbc3b4",
   "manifest": {
     "command": "mreplay fit",
-    "commit": "c377c35b23f10221ad0a251e4466e0bb2cf6b9f5",
-    "elapsed_s": 309.55,
+    "commit": "d95dd1991b2a507650797879c6505a6d6b08d265",
+    "elapsed_s": 733.65,
     "hardware": {
       "cores": 18,
       "cpu": "Apple M5 Pro",
@@ -211,7 +211,7 @@
     "fully_executed": 15420,
     "kaplan_meier_fill": 0.8637576671337528,
     "orders": 74870,
-    "probe_fill_rate": 0.7474527761877504,
+    "probe_fill_rate": 0.7458500286204923,
     "still_resting": 2
   },
   "probe_rows": {
