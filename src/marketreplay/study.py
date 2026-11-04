@@ -22,12 +22,17 @@ WORKERS = 8
 
 @dataclass(frozen=True)
 class ParentSpec:
-    """One grid of same-sized parents per session, on whole even seconds."""
+    """One grid of same-sized parents per session, on whole even seconds.
 
-    target_lots: int = 40
-    horizon_s: int = 300
+    The size and horizon came from a sweep on validation days. At 40 lots in
+    300 s, a resting order always finished and no decision existed. At 200 lots in
+    60 s, resting alone became the worst strategy. 120 lots in 60 s sits between.
+    """
+
+    target_lots: int = 120
+    horizon_s: int = 60
     first_start_s: int = 120
-    spacing_s: int = 120
+    spacing_s: int = 60
 
 
 @dataclass(frozen=True)
@@ -53,7 +58,12 @@ class Study:
     plan: StudyPlan = StudyPlan()
     parents: ParentSpec = ParentSpec()
     split: Split = Split()
-    exec_config: ExecConfig = field(default_factory=ExecConfig)
+    exec_config: ExecConfig = field(
+        default_factory=lambda: ExecConfig(
+            participation_cap_pct=30,
+            participation_free_lots=16,
+        )
+    )
 
 
 def plan_folder(plan: StudyPlan) -> Path:

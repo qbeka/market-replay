@@ -635,6 +635,13 @@ class Engine:
 
 def run_session(events: list[Event], work: list[tuple[Parent, Strategy]], config: ExecConfig) -> list[Run]:
     """Replay one session and return one Run per (parent, strategy) pair, in input order."""
+    return replay_session(events, work, config)[0]
+
+
+def replay_session(
+    events: list[Event], work: list[tuple[Parent, Strategy]], config: ExecConfig
+) -> tuple[list[Run], list[Snapshot]]:
+    """Replay one session. Also returns every snapshot, which labels need after the fact."""
     engine = Engine(config)
     runs = [Run(parent, strategy) for parent, strategy in work]
     for run in runs:
@@ -653,4 +660,4 @@ def run_session(events: list[Event], work: list[tuple[Parent, Strategy]], config
         replay_apply(event)
         engine.on_feed_applied(event)
     engine.run_until(2**63)
-    return runs
+    return runs, engine.snapshots
