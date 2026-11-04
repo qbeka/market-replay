@@ -95,3 +95,12 @@ def test_book_states_match_after_every_event(tmp_path):
     for day in (PLAIN_DAY, HALT_DAY, GAP_DAY):
         events, events_path, _, _ = setup(tmp_path, day, BASE)
         assert run_book(events_path)["checksum"] == python_book_checksum(events)
+
+
+def test_a_small_differential_fuzz_finds_no_divergence():
+    from marketreplay.fuzz import run_fuzz
+
+    result = run_fuzz(cases=60, workers=4)
+    assert result["cases"] == 60
+    assert result["ledger_divergences"] == 0
+    assert result["book_divergences"] == 0

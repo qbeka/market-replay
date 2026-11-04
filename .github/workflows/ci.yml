@@ -1,0 +1,16 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --group dev
+      - run: uv run mreplay smoke
+      - run: uv run pytest --cov=marketreplay --cov-report=term
+      - run: uv run mreplay fuzz --cases 2000

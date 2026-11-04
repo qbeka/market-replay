@@ -26,6 +26,8 @@ def main() -> None:
         ("benchmark", "run final, stress, profile, report and demo in order"),
     ]:
         commands.add_parser(name, help=text)
+    fuzz = commands.add_parser("fuzz", help="differential fuzz of C against Python under sanitizers")
+    fuzz.add_argument("--cases", type=int, default=100_000)
     trace = commands.add_parser("trace", help="print one parent's full event trace")
     trace.add_argument("--day", type=int, required=True)
     trace.add_argument("--parent", type=int, required=True, help="index of the parent within the day")
@@ -41,6 +43,11 @@ def main() -> None:
         from .smoke import run_smoke
 
         run_smoke()
+    elif args.command == "fuzz":
+        from .fuzz import run_fuzz
+        from .pipeline import RESULTS
+
+        print(json.dumps(run_fuzz(args.cases, RESULTS / "fuzz.json"), indent=2))
     elif args.command == "generate":
         index = ensure_data(study.plan)
         print(f"{index['events']:,} events over {study.plan.days} days. Input hash {index['sha256'][:16]}")

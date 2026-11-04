@@ -18,12 +18,17 @@ BINARY = REPO / "compiled" / "build" / "replay"
 FLAGS = ["-O2", "-std=c11", "-Wall", "-Wextra", "-Werror"]
 
 
-def build() -> Path:
-    """Compile if the binary is older than its source."""
-    if not BINARY.exists() or BINARY.stat().st_mtime < SOURCE.stat().st_mtime:
-        BINARY.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["clang", *FLAGS, "-o", str(BINARY), str(SOURCE)], check=True)
-    return BINARY
+CHECKED_BINARY = REPO / "compiled" / "build" / "replay_checked"
+CHECKED_FLAGS = ["-O1", "-g", "-std=c11", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined", "-fno-sanitize-recover=all"]
+
+
+def build(checked: bool = False) -> Path:
+    """Compile if the binary is older than its source. checked adds ASan and UBSan."""
+    binary, flags = (CHECKED_BINARY, CHECKED_FLAGS) if checked else (BINARY, FLAGS)
+    if not binary.exists() or binary.stat().st_mtime < SOURCE.stat().st_mtime:
+        binary.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["clang", *flags, "-o", str(binary), str(SOURCE)], check=True)
+    return binary
 
 
 def write_tape(runs: list[Run], path: Path) -> None:
@@ -102,18 +107,18 @@ class ExecResult:
         return hashlib.sha256("\n".join(self.lines).encode()).hexdigest()
 
 
-def run_exec(events_path: Path, tape_path: Path, config: ExecConfig) -> ExecResult:
+def run_exec(events_path: Path, tape_path: Path, config: ExecConfig, checked: bool = False) -> ExecResult:
     done = subprocess.run(
-        [str(build()), "exec", str(events_path), str(tape_path), *options(config)],
+        [str(build(checked)), "exec", str(events_path), str(tape_path), *options(config)],
         capture_output=True, text=True, check=True,
     )  # fmt: skip
     seconds = float(done.stderr.split()[-1])
     return ExecResult(by_run(done.stdout.splitlines()), seconds)
 
 
-def run_book(events_path: Path, repeats: int = 1) -> dict:
+def run_book(events_path: Path, repeats: int = 1, checked: bool = False) -> dict:
     done = subprocess.run(
-        [str(build()), "book", str(events_path), str(repeats)], capture_output=True, text=True, check=True
+        [str(build(checked)), "book", str(events_path), str(repeats)], capture_output=True, text=True, check=True
     )
     fields = done.stdout.split()
     return {"events": int(fields[1]), "seconds": float(fields[5]), "checksum": fields[7]}
