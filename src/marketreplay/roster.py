@@ -8,6 +8,7 @@ from .strategies import EqualTime, ImmediateCross, PassiveOnly, RandomPolicy, Ur
 from .synthetic import NS_PER_S
 
 CLIP_LOTS = 16
+ORACLE_BUCKET_NS = 2 * NS_PER_S
 
 
 @dataclass
@@ -23,8 +24,14 @@ class Fitted:
     comparator: object = None
 
 
-def build(fitted: Fitted, name: str, parent: Parent) -> Strategy:
-    """A fresh strategy for one parent. Seeds come from the parent, so paired runs repeat exactly."""
+def build(fitted: Fitted, name: str, parent: Parent, realized_curve: list[float] | None = None) -> Strategy:
+    """A fresh strategy for one parent. Seeds come from the parent, so paired runs repeat exactly.
+
+    realized_curve is the session's own final volume. Only oracle_volume may use it. That
+    strategy cannot exist in practice, so it is reported apart and is never a baseline to beat.
+    """
+    if name == "oracle_volume":
+        return VolumeSchedule(realized_curve, ORACLE_BUCKET_NS, name=name)
     if name == "immediate":
         return ImmediateCross()
     if name == "equal_time":

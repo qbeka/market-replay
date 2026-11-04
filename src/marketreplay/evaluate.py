@@ -8,10 +8,11 @@ from pathlib import Path
 
 from threadpoolctl import threadpool_limits
 
+from .events import Event, Kind
 from .execution import ExecConfig, Run, run_session
 from .ledger import Role
 from .metrics import forced_lots, shortfall_bps
-from .roster import Fitted, build
+from .roster import Fitted, ORACLE_BUCKET_NS, build
 from .study import Study, WORKERS, load_day, parents_for_day
 
 ROW_FIELDS = [
@@ -52,11 +53,26 @@ def to_row(day: int, name: str, run: Run) -> Row:
     )  # fmt: skip
 
 
+def realized_curve(events: list[Event], session_s: int) -> list[float]:
+    """Cumulative share of this session's final volume. Knowing this requires the future."""
+    buckets = [0] * (session_s // 2 + 1)
+    for e in events:
+        if e.kind == Kind.EXECUTE or e.kind == Kind.TRADE_HIDDEN:
+            buckets[e.ts_ns // ORACLE_BUCKET_NS] += e.qty
+    total = sum(buckets)
+    running, curve = 0, []
+    for lots in buckets:
+        running += lots
+        curve.append(running / total)
+    return curve
+
+
 def evaluate_day(study: Study, fitted: Fitted, names: list[str], config: ExecConfig, day: int) -> list[Row]:
     """Every strategy trades every parent of the day in one pass over the feed."""
     events = load_day(study.plan, day)
     parents = parents_for_day(study, day)
-    work = [(parent, build(fitted, name, parent)) for parent in parents for name in names]
+    realized = realized_curve(events, study.plan.session_s) if "oracle_volume" in names else None
+    work = [(parent, build(fitted, name, parent, realized)) for parent in parents for name in names]
     labels = [name for _ in parents for name in names]
     runs = run_session(events, work, config)
     return [to_row(day, name, run) for name, run in zip(labels, runs)]
@@ -70,6 +86,20 @@ def evaluate_days(study: Study, fitted: Fitted, names: list[str], config: ExecCo
     with ProcessPoolExecutor(WORKERS, initializer=_one_thread_per_worker) as pool:
         per_day = pool.map(partial(evaluate_day, study, fitted, names, config), days)
         return [row for rows in per_day for row in rows]
+
+
+def read_rows(path: Path) -> list[Row]:
+    rows = []
+    with open(path, newline="") as handle:
+        for r in csv.DictReader(handle):
+            rows.append(
+                Row(
+                    int(r["day"]), int(r["parent_id"]), int(r["side"]), r["strategy"], r["excluded"],
+                    float(r["shortfall_bps"]), int(r["forced_lots"]), int(r["maker_lots"]), int(r["taker_lots"]),
+                    int(r["fees_mticks"]), int(r["penalties_mticks"]), float(r["last_voluntary_fill_s"]),
+                )  # fmt: skip
+            )
+    return rows
 
 
 def write_rows(rows: list[Row], path: Path) -> None:

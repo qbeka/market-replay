@@ -339,3 +339,107 @@ def require_freeze(study: Study) -> dict:
     if frozen["input_sha256"] != ensure_data(study.plan)["sha256"]:
         raise SystemExit("Inputs changed after the freeze.")
     return frozen
+
+
+# Final test and stress ---------------------------------------------------------------
+
+
+def compare(rows, a: str, b: str) -> dict:
+    days, differences = paired_day_means(rows, a, b)
+    mean, low, high = bootstrap_mean_ci(differences)
+    return {"a": a, "b": b, "days": len(days), "mean_diff_bps": mean, "ci_low": low, "ci_high": high}
+
+
+def verdict(rows, baseline: str) -> dict:
+    """Apply the frozen decision rule. Each test is reported on its own."""
+    paired = compare(rows, "learned", baseline)
+    learned, other = summarize(rows, "learned"), summarize(rows, baseline)
+    checks = {
+        "mean_cost_lower": paired["ci_high"] < 0,
+        "tail_not_worse": learned["p95_bps"] <= other["p95_bps"] + 0.5,
+        "forced_not_worse": learned["forced_lot_pct"] <= other["forced_lot_pct"] + 1.0,
+    }
+    return {"paired": paired, "checks": checks, "improved": all(checks.values())}
+
+
+def session_regimes(study: Study, days: list[int], thresholds: dict) -> dict[int, str]:
+    return {s.day: regime(s, thresholds) for s in all_session_stats(study, days)}
+
+
+def final(study: Study) -> dict:
+    """The one evaluation on test days."""
+    started = time.perf_counter()
+    frozen = require_freeze(study)
+    fitted = load_fitted()
+    days = study.split.days("test")
+    names = BASELINES + ["learned", "fitted_q", "oracle_volume"]
+    rows = evaluate_days(study, fitted, names, fitted.config, days)
+    write_rows(rows, RESULTS / "raw" / "test.csv")
+    regimes = session_regimes(study, days, frozen["regime_thresholds"])
+    by_regime = {}
+    for label in ("calm", "volatile", "sparse"):
+        subset = [r for r in rows if regimes[r.day] == label]
+        if not subset:
+            continue
+        by_regime[label] = {
+            "days": sorted({r.day for r in subset}),
+            "summaries": {n: summarize(subset, n) for n in names},
+            "learned_vs_best_baseline": compare(subset, "learned", frozen["best_baseline"]),
+        }
+    probes = collect_probes(study, fitted.config, days)
+    predicted = fitted.fill_model.predict(probes["x"])
+    payload = {
+        "verdict": verdict(rows, frozen["best_baseline"]),
+        "summaries": {n: summarize(rows, n) for n in names},
+        "comparisons": [compare(rows, "learned", n) for n in names if n != "learned"],
+        "regimes": by_regime,
+        "exclusions": {
+            reason: sum(1 for r in rows if r.excluded == reason and r.strategy == "learned")
+            for reason in sorted({r.excluded for r in rows if r.excluded})
+        },
+        "fill_model_on_test": {
+            "rows": len(predicted),
+            "brier": brier(probes["filled"], predicted),
+            "base_rate_brier": brier(probes["filled"], np.full(len(predicted), probes["filled"].mean())),
+            "ece": expected_calibration_error(probes["filled"], predicted),
+            "calibration": calibration_table(probes["filled"], predicted),
+        },
+        "manifest": manifest(study, "mreplay final", time.perf_counter() - started, {"raw_sha256": sha256_file(RESULTS / "raw" / "test.csv")}),
+    }
+    write_json(RESULTS / "final.json", payload)
+    return payload
+
+
+def stress(study: Study) -> dict:
+    """Frozen strategies under moved assumptions. Nothing is refit, and the policy keeps its fee beliefs."""
+    started = time.perf_counter()
+    frozen = require_freeze(study)
+    fitted = load_fitted()
+    days = study.split.days("test")
+    baseline = frozen["best_baseline"]
+    names = list(dict.fromkeys(STRESS_STRATEGIES + [baseline]))
+    table = {}
+    for name, config in stress_scenarios(fitted.config).items():
+        rows = evaluate_days(study, fitted, names, config, days)
+        write_rows(rows, RESULTS / "raw" / "stress" / f"{name}.csv")
+        summaries = {n: summarize(rows, n) for n in names}
+        table[name] = {
+            "summaries": summaries,
+            "cheapest": min(names, key=lambda n: summaries[n]["mean_bps"]),
+            "learned_vs_baseline": compare(rows, "learned", baseline),
+            "learned_vs_immediate": compare(rows, "learned", "immediate"),
+            "verdict": verdict(rows, baseline),
+        }
+    base = table["base"]["learned_vs_baseline"]
+    for name, entry in table.items():
+        paired = entry["learned_vs_baseline"]
+        base_sign = (base["ci_high"] < 0) - (base["ci_low"] > 0)
+        sign = (paired["ci_high"] < 0) - (paired["ci_low"] > 0)
+        entry["conclusion_changes"] = sign != base_sign
+    payload = {
+        "baseline": baseline,
+        "scenarios": table,
+        "manifest": manifest(study, "mreplay stress", time.perf_counter() - started, {"days": len(days)}),
+    }
+    write_json(RESULTS / "stress.json", payload)
+    return payload
