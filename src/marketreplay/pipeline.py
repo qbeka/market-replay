@@ -237,3 +237,105 @@ def tune(study: Study) -> dict:
     }
     write_json(RESULTS / "tune.json", payload)
     return payload
+
+
+# Freeze -----------------------------------------------------------------------------
+
+DECISION_RULE = {
+    "primary_comparison": "learned against the best causal baseline chosen on validation days",
+    "unit_of_replication": "trading day",
+    "improved_only_if_all_hold": [
+        "95% day-bootstrap interval of mean(learned - baseline) lies entirely below 0 bps",
+        "p95 shortfall of learned is at most baseline p95 + 0.5 bps",
+        "forced lot percentage of learned is at most baseline's + 1 percentage point",
+    ],
+    "otherwise": "report no demonstrated improvement. A negative result is a valid finding.",
+}
+
+STRESS_STRATEGIES = ["immediate", "equal_time", "passive_only", "urgency", "learned", "fitted_q"]
+
+
+def stress_scenarios(base: ExecConfig) -> dict[str, ExecConfig]:
+    """Every assumption gets moved on its own. The last two move several together."""
+
+    def slower(extra_ms: int) -> ExecConfig:
+        extra = extra_ms * 1_000_000
+        return replace(
+            base,
+            obs_latency_ns=base.obs_latency_ns + extra,
+            order_latency_ns=base.order_latency_ns + extra,
+            cancel_latency_ns=base.cancel_latency_ns + extra,
+        )
+
+    return {
+        "base": base,
+        "latency_plus_50ms": slower(50),
+        "latency_plus_250ms": slower(250),
+        "latency_plus_900ms": slower(900),
+        "taker_fee_zero": replace(base, taker_fee_mticks=0),
+        "taker_fee_double": replace(base, taker_fee_mticks=base.taker_fee_mticks * 2),
+        "maker_rebate_none": replace(base, maker_fee_mticks=0),
+        "maker_fee_charged": replace(base, maker_fee_mticks=100),
+        "participation_10pct": replace(base, participation_cap_pct=10),
+        "participation_60pct": replace(base, participation_cap_pct=60),
+        "cancel_credit_50pct": replace(base, cancel_ahead_credit_pct=50),
+        "cancel_credit_0pct": replace(base, cancel_ahead_credit_pct=0),
+        "queue_ahead_150pct": replace(base, queue_ahead_pct=150),
+        "queue_ahead_250pct": replace(base, queue_ahead_pct=250),
+        "trade_through_only": replace(base, trade_through_only=True),
+        "adverse_fill_300": replace(base, adverse_fill_mticks=300),
+        "adverse_fill_1000": replace(base, adverse_fill_mticks=1000),
+        "pessimistic_fills": replace(
+            base, cancel_ahead_credit_pct=50, queue_ahead_pct=150, adverse_fill_mticks=300
+        ),
+        "worst_case_fills": replace(
+            base, cancel_ahead_credit_pct=0, queue_ahead_pct=250, adverse_fill_mticks=1000, trade_through_only=True
+        ),
+    }
+
+
+def freeze(study: Study) -> dict:
+    """Write down what the final test will do, before it runs. Commit this file first."""
+    tuned = json.loads((RESULTS / "tune.json").read_text())
+    fit_report = json.loads((RESULTS / "fit.json").read_text())
+    fitted = load_fitted()
+    payload = {
+        "hypothesis": (
+            "A calibrated fill model inside a constrained controller lowers mean implementation "
+            "shortfall against the best causal baseline on paired parents, without a worse tail "
+            "and without more forced completion."
+        ),
+        "split": asdict(study.split),
+        "workload": asdict(study.parents),
+        "input_sha256": ensure_data(study.plan)["sha256"],
+        "fitted_sha256": sha256_file(FITTED_PATH),
+        "baselines": BASELINES + ["fitted_q", "oracle_volume"],
+        "oracle_note": "oracle_volume sees realized volume. It is labeled and never eligible as the best baseline.",
+        "metrics": ["mean_bps", "median_bps", "p95_bps", "voluntary_completion_pct", "forced_lot_pct"],
+        "decision_rule": DECISION_RULE,
+        "best_baseline": tuned["best_baseline"],
+        "policy": asdict(next(iter(fitted.policies.values()))),
+        "urgency_behind_lots": next(iter(fitted.urgency_behind.values())),
+        "config": json.loads(json.dumps(asdict(fitted.config), default=str)),
+        "regime_thresholds": fit_report["regime_thresholds"],
+        "stress_scenarios": list(stress_scenarios(fitted.config)),
+        "stress_strategies": STRESS_STRATEGIES,
+        "bootstrap": {"draws": 10_000, "seed": 5, "level": 0.95},
+        "code_commit_at_freeze": _git("rev-parse", "HEAD"),
+    }
+    write_json(FREEZE_PATH, payload)
+    return payload
+
+
+def require_freeze(study: Study) -> dict:
+    """Refuse to touch test days unless the frozen file is committed and still matches."""
+    if not FREEZE_PATH.exists():
+        raise SystemExit("No freeze file. Run `mreplay freeze` and commit results/freeze.json.")
+    frozen = json.loads(FREEZE_PATH.read_text())
+    if _git("status", "--porcelain", "--", str(FREEZE_PATH)):
+        raise SystemExit("results/freeze.json is not committed. Commit it before the final test.")
+    if frozen["fitted_sha256"] != sha256_file(FITTED_PATH):
+        raise SystemExit("Fitted artifacts changed after the freeze.")
+    if frozen["input_sha256"] != ensure_data(study.plan)["sha256"]:
+        raise SystemExit("Inputs changed after the freeze.")
+    return frozen
