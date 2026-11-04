@@ -1,0 +1,127 @@
+{
+  "baselines": [
+    "immediate",
+    "equal_time",
+    "volume_schedule",
+    "passive_only",
+    "urgency",
+    "hv_random",
+    "fitted_q",
+    "oracle_volume"
+  ],
+  "best_baseline": "urgency",
+  "bootstrap": {
+    "draws": 10000,
+    "level": 0.95,
+    "seed": 5
+  },
+  "code_commit_at_freeze": "16b4f1696fd5a9e4db6269a70c3e159522d66eae",
+  "config": {
+    "adverse_fill_mticks": 0,
+    "book_levels": 5,
+    "cancel_ahead_credit_pct": 100,
+    "cancel_latency_ns": 9349940,
+    "completion_penalty_ticks": 2,
+    "cross_slippage_ticks": 1,
+    "decision_interval_ns": 2000000000,
+    "maker_fee_mticks": -100,
+    "obs_latency_ns": 4349940,
+    "order_latency_ns": 9349940,
+    "participation_cap_pct": 30,
+    "participation_free_lots": 16,
+    "participation_window_ns": 60000000000,
+    "priority": {
+      "size_decrease_loses_priority": false,
+      "size_increase_loses_priority": true
+    },
+    "queue_ahead_pct": 100,
+    "record_trace": false,
+    "snapshot_interval_ns": 1000000000,
+    "taker_fee_mticks": 300,
+    "trade_through_only": false,
+    "trade_window_ns": 10000000000,
+    "unfilled_extra_ticks": 10
+  },
+  "decision_rule": {
+    "improved_only_if_all_hold": [
+      "95% day-bootstrap interval of mean(learned - baseline) lies entirely below 0 bps",
+      "p95 shortfall of learned is at most baseline p95 + 0.5 bps",
+      "forced lot percentage of learned is at most baseline's + 1 percentage point"
+    ],
+    "otherwise": "report no demonstrated improvement. A negative result is a valid finding.",
+    "primary_comparison": "learned against the best causal baseline chosen on validation days",
+    "unit_of_replication": "trading day"
+  },
+  "fitted_sha256": "47a61d768ac869a3f69bf87303e010dfaa776b64e09160f6dcf9616502c33ede",
+  "hypothesis": "A calibrated fill model inside a constrained controller lowers mean implementation shortfall against the best causal baseline on paired parents, without a worse tail and without more forced completion.",
+  "input_sha256": "6ed7b002482ea576103c31a31f6676e3bf713c0e6d8f81281873d970c5b85815",
+  "metrics": [
+    "mean_bps",
+    "median_bps",
+    "p95_bps",
+    "voluntary_completion_pct",
+    "forced_lot_pct"
+  ],
+  "oracle_note": "oracle_volume sees realized volume. It is labeled and never eligible as the best baseline.",
+  "policy": {
+    "behind_lots": 30,
+    "catch_up_ticks": 0.0,
+    "clip_lots": 16,
+    "final_s": 4.0,
+    "wait_margin_ticks": 99.0
+  },
+  "regime_thresholds": {
+    "sparse_touch_lots": 12.8,
+    "volatile_vol_ticks": 4.344445288322558
+  },
+  "split": {
+    "test": [
+      86,
+      119
+    ],
+    "train": [
+      0,
+      59
+    ],
+    "validation": [
+      61,
+      84
+    ]
+  },
+  "stress_scenarios": [
+    "base",
+    "latency_plus_50ms",
+    "latency_plus_250ms",
+    "latency_plus_900ms",
+    "taker_fee_zero",
+    "taker_fee_double",
+    "maker_rebate_none",
+    "maker_fee_charged",
+    "participation_10pct",
+    "participation_60pct",
+    "cancel_credit_50pct",
+    "cancel_credit_0pct",
+    "queue_ahead_150pct",
+    "queue_ahead_250pct",
+    "trade_through_only",
+    "adverse_fill_300",
+    "adverse_fill_1000",
+    "pessimistic_fills",
+    "worst_case_fills"
+  ],
+  "stress_strategies": [
+    "immediate",
+    "equal_time",
+    "passive_only",
+    "urgency",
+    "learned",
+    "fitted_q"
+  ],
+  "urgency_behind_lots": 30,
+  "workload": {
+    "first_start_s": 120,
+    "horizon_s": 60,
+    "spacing_s": 60,
+    "target_lots": 120
+  }
+}
