@@ -188,10 +188,11 @@ def load_fitted() -> Fitted:
 
 URGENCY_GRID = [8, 12, 20, 30, 45, 60]
 POLICY_GRID = [
-    PolicyParams(CLIP_LOTS, behind, catch_up, final)
-    for behind in (20, 30, 45)
-    for catch_up in (0.0, 0.5, 1.0)
+    PolicyParams(CLIP_LOTS, behind, catch_up, final, margin)
+    for behind in (20, 30)
+    for catch_up in (0.0, 0.5)
     for final in (4.0, 8.0)
+    for margin in (0.5, 1.5, 99.0)  # 99 means never wait, so the data can reject waiting.
 ]
 
 
@@ -201,7 +202,7 @@ def tune(study: Study) -> dict:
     fitted = load_fitted()
     fitted.urgency_behind = {f"urgency_{b}": b for b in URGENCY_GRID}
     fitted.policies = {
-        f"learned_b{p.behind_lots}_c{p.catch_up_ticks}_f{p.final_s}": p for p in POLICY_GRID
+        f"learned_b{p.behind_lots}_c{p.catch_up_ticks}_f{p.final_s}_w{p.wait_margin_ticks}": p for p in POLICY_GRID
     }
     names = [n for n in BASELINES if n != "urgency"] + list(fitted.urgency_behind) + list(fitted.policies) + ["fitted_q"]
     rows = evaluate_days(study, fitted, names, fitted.config, study.split.days("validation"))

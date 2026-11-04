@@ -6,7 +6,7 @@ observed midpoint, and takes the cheapest one that the constraints allow:
     cross = half_spread + taker
     rest  = p_fill x (-half_spread + maker)
             + (1 - p_fill) x (move_if_unfilled + half_spread + taker + catch_up)
-    wait  = expected_move + min(cross, rest)
+    wait  = expected_move + min(cross, rest) + wait_margin
 
 p_fill and the moves come from models fitted on earlier days. Keeping the rule this
 plain means any change in cost can be traced to one decision, which an end to end
@@ -16,6 +16,12 @@ Constraints, checked first:
 
     behind_lots   cross the shortfall once behind an equal-time schedule by more
     final_s       inside this many seconds, cross whatever remains
+    no waiting    a parent behind schedule may not wait
+
+Waiting pays wait_margin because it is not free: it gives up time, and if an order is
+resting it gives up queue position that took seconds to earn. Without this margin the
+sign of a noisy prediction decided the action, and the policy threw away its queue on
+44% of decisions. See docs/experiments.md.
 """
 
 from dataclasses import dataclass
@@ -34,6 +40,7 @@ class PolicyParams:
     behind_lots: int = 20
     catch_up_ticks: float = 0.5
     final_s: float = 4.0
+    wait_margin_ticks: float = 1.0
 
 
 class LearnedPolicy:
@@ -64,6 +71,8 @@ class LearnedPolicy:
         p_fill = float(self.fill_model.predict(batch)[0])
         move_unfilled, move_overall = (float(a[0]) for a in self.move_model.predict(batch))
         costs = self.price_choices(row[0] / 2, p_fill, move_unfilled, move_overall)
+        if behind > 0:
+            del costs["wait"]
         choice = min(costs, key=costs.get)
         self.last_info = {
             "rule": "model", "p_fill": round(p_fill, 4), "move_unfilled": round(move_unfilled, 4),
@@ -79,5 +88,5 @@ class LearnedPolicy:
         cross = half_spread + self.taker_ticks
         catch_up = move_unfilled + half_spread + self.taker_ticks + self.params.catch_up_ticks
         rest = p_fill * (-half_spread + self.maker_ticks) + (1 - p_fill) * catch_up
-        wait = move_overall + min(cross, rest)
+        wait = move_overall + min(cross, rest) + self.params.wait_margin_ticks
         return {"cross": cross, "rest": rest, "wait": wait}

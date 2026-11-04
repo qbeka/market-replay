@@ -38,11 +38,11 @@ def policy(p, unfilled=0.0, overall=0.0, **params):
 
 
 def test_choices_match_the_hand_calculation():
-    costs = policy(0.5, unfilled=2.0, overall=-1.0, catch_up_ticks=0.5).price_choices(1.0, 0.5, 2.0, -1.0)
+    costs = policy(0.5, catch_up_ticks=0.5, wait_margin_ticks=0.25).price_choices(1.0, 0.5, 2.0, -1.0)
     assert costs["cross"] == pytest.approx(1.3)
     # 0.5 x (-1 - 0.1) + 0.5 x (2 + 1 + 0.3 + 0.5) = -0.55 + 1.9
     assert costs["rest"] == pytest.approx(1.35)
-    assert costs["wait"] == pytest.approx(-1.0 + 1.3)
+    assert costs["wait"] == pytest.approx(-1.0 + 1.3 + 0.25)
 
 
 def test_a_likely_fill_rests():
@@ -53,8 +53,17 @@ def test_an_unlikely_fill_with_a_price_running_away_crosses():
     assert policy(0.05, unfilled=3.0, overall=1.0).decide(view()).action == Action.CROSS
 
 
-def test_a_price_expected_to_fall_waits():
-    assert policy(0.2, unfilled=1.0, overall=-4.0).decide(view()).action == Action.WAIT
+def test_a_price_expected_to_fall_far_enough_waits():
+    # Ahead of schedule: 20 lots are due at 10 s and 30 are done.
+    assert policy(0.2, unfilled=1.0, overall=-4.0).decide(view(filled=30)).action == Action.WAIT
+
+
+def test_a_small_predicted_fall_does_not_give_up_the_queue():
+    assert policy(0.7, unfilled=1.0, overall=-0.3).decide(view(filled=30)).action == Action.REST
+
+
+def test_a_parent_behind_schedule_may_not_wait():
+    assert policy(0.2, unfilled=1.0, overall=-4.0).decide(view(filled=0)).action != Action.WAIT
 
 
 def test_the_behind_constraint_overrides_the_model():
