@@ -5,14 +5,14 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Callable
 
-from .execution import ExecConfig, Parent, Run, Strategy, run_session
+from threadpoolctl import threadpool_limits
+
+from .execution import ExecConfig, Run, run_session
 from .ledger import Role
 from .metrics import forced_lots, shortfall_bps
+from .roster import Fitted, build
 from .study import Study, WORKERS, load_day, parents_for_day
-
-StrategyFactory = Callable[[Parent], Strategy]
 
 ROW_FIELDS = [
     "day", "parent_id", "side", "strategy", "excluded", "shortfall_bps", "forced_lots",
@@ -52,22 +52,23 @@ def to_row(day: int, name: str, run: Run) -> Row:
     )  # fmt: skip
 
 
-def evaluate_day(
-    study: Study, factories: dict[str, StrategyFactory], config: ExecConfig, day: int
-) -> list[Row]:
+def evaluate_day(study: Study, fitted: Fitted, names: list[str], config: ExecConfig, day: int) -> list[Row]:
+    """Every strategy trades every parent of the day in one pass over the feed."""
     events = load_day(study.plan, day)
     parents = parents_for_day(study, day)
-    work = [(parent, factory(parent)) for parent in parents for factory in factories.values()]
-    names = [name for _ in parents for name in factories]
+    work = [(parent, build(fitted, name, parent)) for parent in parents for name in names]
+    labels = [name for _ in parents for name in names]
     runs = run_session(events, work, config)
-    return [to_row(day, name, run) for name, run in zip(names, runs)]
+    return [to_row(day, name, run) for name, run in zip(labels, runs)]
 
 
-def evaluate_days(
-    study: Study, factories: dict[str, StrategyFactory], config: ExecConfig, days: list[int]
-) -> list[Row]:
-    with ProcessPoolExecutor(WORKERS) as pool:
-        per_day = pool.map(partial(evaluate_day, study, factories, config), days)
+def _one_thread_per_worker() -> None:
+    threadpool_limits(1)  # Workers run days in parallel, so models must not also spawn threads.
+
+
+def evaluate_days(study: Study, fitted: Fitted, names: list[str], config: ExecConfig, days: list[int]) -> list[Row]:
+    with ProcessPoolExecutor(WORKERS, initializer=_one_thread_per_worker) as pool:
+        per_day = pool.map(partial(evaluate_day, study, fitted, names, config), days)
         return [row for rows in per_day for row in rows]
 
 
