@@ -1,0 +1,31 @@
+{
+  "_comment": "Worked by hand. Each row is the state after the event with that line index in hand_trace.csv. bids are best first, asks are best first, queue lists order ids in priority order at the best bid.",
+  "states": [
+    {"line": 1,  "valid": true,  "bids": [[100, 10]], "asks": [], "best_bid_queue": [1]},
+    {"line": 2,  "valid": true,  "bids": [[100, 15]], "asks": [], "best_bid_queue": [1, 2]},
+    {"line": 3,  "valid": true,  "bids": [[100, 15]], "asks": [[102, 7]], "best_bid_queue": [1, 2]},
+    {"line": 4,  "valid": true,  "bids": [[100, 15]], "asks": [[102, 7], [103, 4]], "best_bid_queue": [1, 2]},
+    {"line": 5,  "valid": true,  "bids": [[100, 15], [99, 8]], "asks": [[102, 7], [103, 4]], "best_bid_queue": [1, 2]},
+    {"line": 6,  "valid": true,  "bids": [[100, 9], [99, 8]], "asks": [[102, 7], [103, 4]], "best_bid_queue": [1, 2]},
+    {"line": 7,  "valid": true,  "bids": [[100, 7], [99, 8]], "asks": [[102, 7], [103, 4]], "best_bid_queue": [1, 2]},
+    {"line": 8,  "valid": true,  "bids": [[100, 9], [99, 8]], "asks": [[102, 7], [103, 4]], "best_bid_queue": [2, 1]},
+    {"line": 9,  "valid": true,  "bids": [[100, 8], [99, 8]], "asks": [[102, 7], [103, 4]], "best_bid_queue": [2, 1]},
+    {"line": 10, "valid": true,  "bids": [[100, 8], [99, 8]], "asks": [[101, 7], [103, 4]], "best_bid_queue": [2, 1]},
+    {"line": 11, "valid": true,  "bids": [[100, 8], [99, 8]], "asks": [[101, 7], [103, 4]], "best_bid_queue": [2, 1]},
+    {"line": 12, "valid": true,  "bids": [[100, 8], [99, 8]], "asks": [[103, 4]], "best_bid_queue": [2, 1]},
+    {"line": 13, "valid": true,  "bids": [[100, 8]], "asks": [[103, 4]], "best_bid_queue": [2, 1]},
+    {"line": 14, "valid": true,  "bids": [[100, 2]], "asks": [[103, 4]], "best_bid_queue": [2]},
+    {"line": 15, "valid": true,  "bids": [], "asks": [[103, 4]], "best_bid_queue": []},
+    {"line": 16, "valid": false},
+    {"line": 17, "valid": false},
+    {"line": 18, "valid": false},
+    {"line": 19, "valid": false},
+    {"line": 20, "valid": true,  "bids": [[100, 4]], "asks": [[102, 4]], "best_bid_queue": [7]},
+    {"line": 21, "valid": true,  "bids": [[100, 5]], "asks": [[102, 4]], "best_bid_queue": [7, 9]},
+    {"line": 22, "valid": false},
+    {"line": 23, "valid": false},
+    {"line": 24, "valid": false},
+    {"line": 25, "valid": true,  "bids": [[50, 1]], "asks": [[51, 1]], "best_bid_queue": [10]}
+  ],
+  "invalid_intervals_ns": [[15000, 18000], [19000, 20000]]
+}
