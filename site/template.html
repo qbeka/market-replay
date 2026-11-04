@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulated Execution Replay</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface: #fcfcfb; --surface-2: #f3f2ee; --line: #dedcd5;
+  --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #6f6e69;
+  --series-1: #2a78d6; --series-2: #eb6834;
+  --bid: #e4eefb; --ask: #fdebe3;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface: #1a1a19; --surface-2: #252523; --line: #3a3a37;
+    --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #a3a297;
+    --series-1: #3987e5; --series-2: #d95926;
+    --bid: #1f2d40; --ask: #3e2a21;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #1a1a19; --surface-2: #252523; --line: #3a3a37;
+  --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #a3a297;
+  --series-1: #3987e5; --series-2: #d95926;
+  --bid: #1f2d40; --ask: #3e2a21;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface); color: var(--ink); font: 15px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; }
+h2 { font-size: 15px; margin: 0 0 8px; }
+p { margin: 0 0 10px; color: var(--ink-2); }
+.banner { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 10px 12px; margin: 12px 0 16px; color: var(--ink); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0; }
+button { font: inherit; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+button[aria-pressed="true"] { border-color: var(--ink); font-weight: 600; }
+input[type=range] { flex: 1 1 200px; min-width: 140px; accent-color: var(--ink-2); }
+.grid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 16px; }
+.panel { border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+.key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
+td, th { padding: 3px 6px; text-align: right; }
+td:first-child, th:first-child { text-align: left; }
+tr.ask td { background: var(--ask); } tr.bid td { background: var(--bid); }
+svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.axis { fill: var(--ink-3); font-size: 11px; }
+.grid-line { stroke: var(--line); stroke-width: 1; }
+.tip { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink-2); min-height: 20px; }
+.log { max-height: 240px; overflow: auto; font-size: 13px; }
+.log div { padding: 2px 0; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+.log div.past { color: var(--ink); }
+.columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+footer { margin-top: 20px; font-size: 13px; color: var(--ink-3); overflow-wrap: anywhere; }
+@media (max-width: 760px) { .grid, .columns { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Two simulated traders, one order</h1>
+  <p>Each trader must finish the same parent order by the same deadline. Both see the market late. Move the slider to step through one recorded run.</p>
+  <div class="banner"><strong>Simulated.</strong> Every order and fill on this page is hypothetical, and the market itself is a seeded synthetic feed. Nothing here traded, and these results say nothing about a real venue.</div>
+  <div id="result"></div>
+  <div class="controls" id="scenes"></div>
+  <div class="controls">
+    <button id="play">Play</button>
+    <input id="time" type="range" min="0" max="60" step="1" value="0" aria-label="Seconds since the order arrived">
+    <span id="clock" class="tip"></span>
+  </div>
+  <div class="grid">
+    <section class="panel">
+      <h2>Order book at this moment, as the market really stood</h2>
+      <table><thead><tr><th>Price</th><th>Lots</th></tr></thead><tbody id="ladder"></tbody></table>
+      <div class="stats" style="margin-top:12px" id="queues"></div>
+    </section>
+    <section class="panel">
+      <div class="stats" id="legend"></div>
+      <h2>Lots left to trade</h2>
+      <svg id="inventory" viewBox="0 0 640 170" role="img" aria-label="Lots left over time for both traders"></svg>
+      <h2 style="margin-top:12px">Cost so far, in basis points of the order</h2>
+      <svg id="cost" viewBox="0 0 640 170" role="img" aria-label="Running cost over time for both traders"></svg>
+      <div class="tip" id="tip"></div>
+    </section>
+  </div>
+  <div class="columns" id="logs"></div>
+  <footer id="foot"></footer>
+</main>
+<script>
+const DATA = /*DATA*/null;
+const LABELS = {learned: "Learned policy", immediate: "Immediate cross", equal_time: "Equal time", volume_schedule: "Volume schedule", passive_only: "Passive only", urgency: "Urgency rule"};
+const label = n => LABELS[n] || n;
+const $ = id => document.getElementById(id);
+let sceneIndex = 0, now = 0, timer = null;
+const scene = () => DATA.scenes[sceneIndex];
+const colors = ["var(--series-1)", "var(--series-2)"];
+const dash = ["", "6 4"];
+
+function stepAt(rows, t, value, start) {
+  let current = start;
+  for (const row of rows) { if (row.t > t) break; current = value(row, current); }
+  return current;
+}
+const left = (p, t, target) => stepAt(p.fills, t, (r, c) => c - r.qty, target);
+const cost = (p, t) => stepAt(p.fills, t, r => r.cost_bps, 0);
+
+function drawChart(svg, series, yMax, yMin, format) {
+  const W = 640, H = 170, L = 44, R = 12, T = 8, B = 22;
+  const horizon = scene().horizon_s;
+  const x = t => L + (W - L - R) * t / horizon;
+  const y = v => T + (H - T - B) * (yMax - v) / (yMax - yMin || 1);
+  let out = "";
+  for (let i = 0; i <= 3; i++) {
+    const v = yMin + (yMax - yMin) * i / 3;
+    out += `<line class="grid-line" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>`;
+    out += `<text class="axis" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${format(v)}</text>`;
+  }
+  for (let t = 0; t <= horizon; t += 15) out += `<text class="axis" x="${x(t)}" y="${H - 6}" text-anchor="middle">${t}s</text>`;
+  series.forEach((points, i) => {
+    let path = "";
+    points.forEach((p, k) => {
+      if (k) path += `H${x(p[0]).toFixed(1)}`;
+      path += `${k ? "V" : "M" + x(p[0]).toFixed(1) + " "}${y(p[1]).toFixed(1)}`;
+    });
+    out += `<path d="${path}" fill="none" stroke="${colors[i]}" stroke-width="2" stroke-dasharray="${dash[i]}"/>`;
+  });
+  out += `<line x1="${x(now)}" x2="${x(now)}" y1="${T}" y2="${H - B}" stroke="var(--ink-3)" stroke-width="1"/>`;
+  svg.innerHTML = out;
+}
+
+function steps(p, target, value) {
+  const horizon = scene().horizon_s, rows = [[0, target]];
+  for (const f of p.fills) rows.push([Math.min(f.t, horizon), value(f, rows[rows.length - 1][1])]);
+  rows.push([horizon, rows[rows.length - 1][1]]);
+  return rows;
+}
+
+function render() {
+  const s = scene(), [a, b] = s.policies;
+  $("time").max = s.horizon_s;
+  $("clock").textContent = `${now.toFixed(0)} s of ${s.horizon_s.toFixed(0)} s`;
+  const snap = s.book.filter(r => r.t <= now).pop() || s.book[0];
+  const asks = snap.asks.slice().reverse().map(l => `<tr class="ask"><td>${l[0]}</td><td>${l[1]}</td></tr>`);
+  const bids = snap.bids.map(l => `<tr class="bid"><td>${l[0]}</td><td>${l[1]}</td></tr>`);
+  $("ladder").innerHTML = asks.concat(bids).join("");
+  $("queues").innerHTML = s.policies.map(p => {
+    const q = p.queue.filter(r => r.t <= now).pop();
+    const fresh = q && now - q.t <= 1.5;
+    return `<div class="stat"><span>${label(p.name)} queue</span><b>${fresh ? q.ahead + " lots" : "None"}</b><span>${fresh ? "ahead at " + q.price : "no resting order"}</span></div>`;
+  }).join("");
+  $("legend").innerHTML = s.policies.map((p, i) => `<div class="stat"><span><i class="key" style="background:${colors[i]}"></i>${label(p.name)}</span><b>${p.shortfall_bps.toFixed(2)} bps</b><span>final cost of this order</span></div>`).join("");
+  drawChart($("inventory"), s.policies.map(p => steps(p, s.target_lots, (f, c) => c - f.qty)), s.target_lots, 0, v => v.toFixed(0));
+  const costSeries = s.policies.map(p => steps(p, 0, f => f.cost_bps));
+  const all = costSeries.flat().map(r => r[1]).concat([0]);
+  drawChart($("cost"), costSeries, Math.max(...all), Math.min(...all), v => v.toFixed(1));
+  $("tip").textContent = `At ${now.toFixed(0)} s. ` + s.policies.map(p => `${label(p.name)}: ${left(p, now, s.target_lots)} lots left, ${cost(p, now).toFixed(2)} bps so far.`).join(" ");
+  $("logs").innerHTML = s.policies.map(p => `<section class="panel"><h2><i class="key" style="background:${colors[s.policies.indexOf(p)]}"></i>${label(p.name)} event trace</h2><div class="log">${p.events.filter(e => !(e.what === "decision" && e.intent === null)).map(line).join("")}</div></section>`).join("");
+}
+
+function line(e) {
+  const past = e.t <= now ? " past" : "";
+  let text = e.what;
+  if (e.what === "decision" && e.intent) text = `decide ${e.intent[0].toLowerCase()}${e.intent[1] ? " " + e.intent[1] : ""}` + (e.p_fill !== undefined ? ` (fill chance ${(e.p_fill * 100).toFixed(0)}%)` : e.rule ? ` (${e.rule})` : "");
+  if (e.what === "fill") text = `${e.role} fill ${e.qty} at ${e.price}`;
+  if (e.what === "send") text = `send ${e.lots} at ${e.price}${e.immediate ? ", cross" : ", rest"}`;
+  if (e.what === "rest") text = `resting, ${e.queue_ahead} lots ahead`;
+  if (e.what === "cancel_request") text = "cancel requested";
+  if (e.what === "cancelled") text = `cancel landed, ${e.lots} lots pulled`;
+  if (e.what === "complete") text = `complete, ${e.filled} lots`;
+  return `<div class="${past}">${e.t.toFixed(3)} s: ${text}</div>`;
+}
+
+function pointerToTime(svg, event) {
+  const box = svg.getBoundingClientRect(), left = 44 / 640, right = 12 / 640;
+  const f = ((event.clientX - box.left) / box.width - left) / (1 - left - right);
+  now = Math.round(Math.max(0, Math.min(1, f)) * scene().horizon_s);
+  $("time").value = now;
+  render();
+}
+
+function init() {
+  const s = DATA.summary;
+  $("result").innerHTML = `<p>Across ${s.parents} paired orders on ${s.days} test days, the learned policy minus ${label(DATA.baseline).toLowerCase()} averaged ${s.mean_diff_bps.toFixed(3)} bps (95% interval ${s.ci_low.toFixed(3)} to ${s.ci_high.toFixed(3)}, resampling days). ${s.improved ? "That passed the rule frozen before the test." : "That did not pass the rule frozen before the test."}</p>`;
+  $("scenes").innerHTML = DATA.scenes.map((sc, i) => `<button data-i="${i}" aria-pressed="${i === 0}">${sc.title}</button>`).join("");
+  $("scenes").onclick = e => {
+    if (e.target.dataset.i === undefined) return;
+    sceneIndex = +e.target.dataset.i; now = 0; $("time").value = 0;
+    [...$("scenes").children].forEach((b, i) => b.setAttribute("aria-pressed", i === sceneIndex));
+    render();
+  };
+  $("time").oninput = e => { now = +e.target.value; render(); };
+  $("play").onclick = () => {
+    if (timer) { clearInterval(timer); timer = null; $("play").textContent = "Play"; return; }
+    $("play").textContent = "Pause";
+    timer = setInterval(() => {
+      now += 1;
+      if (now > scene().horizon_s) { now = scene().horizon_s; clearInterval(timer); timer = null; $("play").textContent = "Play"; }
+      $("time").value = now; render();
+    }, 250);
+  };
+  for (const id of ["inventory", "cost"]) $(id).addEventListener("pointermove", e => pointerToTime($(id), e));
+  $("foot").textContent = `Scene rule: ${scene().rule}. Generated from run ${DATA.commit.slice(0, 12)}, inputs ${DATA.input_sha256.slice(0, 12)}. Prices in ticks, sizes in lots.`;
+  render();
+}
+init();
+</script>
+</body>
+</html>
