@@ -177,8 +177,8 @@ def test_the_participation_cap_limits_fills_inside_the_window():
     config = ExecConfig(
         **{**CONFIG.__dict__, "participation_cap_pct": 50, "participation_window_ns": 1000, "participation_free_lots": 0}
     )
-    # By t=150 the tape shows 3 + 1 + 2 = 6 lots. 50% allows 3, and 2 + 3 lots would
-    # need 11 lots of tape. The trade through at t=165 takes volume to 9, allowing 4 in all.
+    # At t=150 the tape shows 3 + 1 + 2 = 6 lots, so 50% allows 3 and the 2 lot fill passes.
+    # At t=165 the tape shows 9 lots, so 50% allows 4 in all. 2 are used, so 2 of 3 pass.
     ledger = run(SCRIPT, config=config).ledger
     assert [(f.ts_ns, f.qty) for f in ledger.fills][:2] == [(150, 2), (165, 2)]
 

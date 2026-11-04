@@ -385,10 +385,7 @@ class Engine:
         limit = now - self.cfg.obs_latency_ns
         while self.visible_snapshots < len(snapshots) and snapshots[self.visible_snapshots].ts_ns <= limit:
             self.visible_snapshots += 1
-        visible = self.visible_snapshots
-        # Runs decide in time order, so this index never needs to move backward.
-        while visible > 0 and snapshots[visible - 1].ts_ns > limit:
-            visible -= 1
+        visible = self.visible_snapshots  # Actions run in time order, so this only moves forward.
         if visible == 0:
             return None
         resting = run.resting
@@ -536,7 +533,7 @@ class Engine:
         for price, _ in self.book.depth(side, self.cfg.book_levels * 4):
             if wanted == 0 or (price - child.price) * child.side > 0:
                 break
-            level_qty = self._consume_level(run, side, price, wanted)
+            level_qty = self._available_at(run, side, price, wanted)
             level_qty = self._capped(run, now, level_qty) if level_qty else 0
             if level_qty == 0:
                 continue
@@ -549,7 +546,7 @@ class Engine:
             run.log(now, "fill", child=child.child_id, price=price, qty=level_qty, role="taker")
             run.notices.append((now + self.cfg.obs_latency_ns, child, level_qty, False))
 
-    def _consume_level(self, run: Run, side: Side, price: int, wanted: int) -> int:
+    def _available_at(self, run: Run, side: Side, price: int, wanted: int) -> int:
         available = 0
         for order_id, qty in self.book.levels[side][price].items():
             available += max(0, qty - run.consumed.get(order_id, 0))
@@ -585,7 +582,7 @@ class Engine:
         for price, _ in self.book.depth(side, 10**6):
             if ledger.remaining_lots == 0:
                 break
-            qty = self._consume_level(run, side, price, ledger.remaining_lots)
+            qty = self._available_at(run, side, price, ledger.remaining_lots)
             worst = price
             if qty:
                 self._commit_consumption(run, side, price, qty)
