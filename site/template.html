@@ -3,208 +3,371 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Simulated Execution Replay</title>
+<title>One Order, Two Traders</title>
+<meta name="description" content="A recorded replay of a simulated execution study. Every order is simulated.">
 <style>
+/* Tokens match qendrimbeka.com and kobamoney.com. */
 :root {
   color-scheme: light;
-  --surface: #fcfcfb; --surface-2: #f3f2ee; --line: #dedcd5;
-  --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #6f6e69;
-  --series-1: #2a78d6; --series-2: #eb6834;
-  --bid: #e4eefb; --ask: #fdebe3;
-}
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme="light"])) {
-    color-scheme: dark;
-    --surface: #1a1a19; --surface-2: #252523; --line: #3a3a37;
-    --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #a3a297;
-    --series-1: #3987e5; --series-2: #d95926;
-    --bid: #1f2d40; --ask: #3e2a21;
-  }
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --surface: #1a1a19; --surface-2: #252523; --line: #3a3a37;
-  --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #a3a297;
-  --series-1: #3987e5; --series-2: #d95926;
-  --bid: #1f2d40; --ask: #3e2a21;
+  --ink: #111511; --body: #444944; --muted: #5a5e5a; --quiet: #8d918e;
+  --forest: 29, 58, 42;
+  --line: #11151117; --line-strong: #1115112e;
+  --tile: #6040200e; --tile-2: #60402017;
+  --learned: #0e7350; --baseline: #e39150;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--surface); color: var(--ink); font: 15px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
-main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; }
-h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; }
-h2 { font-size: 15px; margin: 0 0 8px; }
-p { margin: 0 0 10px; color: var(--ink-2); }
-.banner { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 10px 12px; margin: 12px 0 16px; color: var(--ink); }
-.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0; }
-button { font: inherit; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
-button[aria-pressed="true"] { border-color: var(--ink); font-weight: 600; }
-input[type=range] { flex: 1 1 200px; min-width: 140px; accent-color: var(--ink-2); }
-.grid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 16px; }
-.panel { border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
-.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-.stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
-.key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
-td, th { padding: 3px 6px; text-align: right; }
-td:first-child, th:first-child { text-align: left; }
-tr.ask td { background: var(--ask); } tr.bid td { background: var(--bid); }
-svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
-.axis { fill: var(--ink-3); font-size: 11px; }
-.grid-line { stroke: var(--line); stroke-width: 1; }
-.tip { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink-2); min-height: 20px; }
-.log { max-height: 240px; overflow: auto; font-size: 13px; }
-.log div { padding: 2px 0; border-bottom: 1px solid var(--line); color: var(--ink-2); }
-.log div.past { color: var(--ink); }
-.columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
-footer { margin-top: 20px; font-size: 13px; color: var(--ink-3); overflow-wrap: anywhere; }
-@media (max-width: 760px) { .grid, .columns { grid-template-columns: 1fr; } }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: #fff; color: var(--ink);
+  font: 16px/24px -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: #1d3a2a26; }
+:focus-visible { outline: 2px solid #1d3a2a; outline-offset: 3px; border-radius: 6px; }
+
+#ridge { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+#dusk { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .55;
+  background: linear-gradient(180deg, #fff 0%, #fff 38%, #f6f5f1 58%, #f8efe7 66%, #f3f4f1 74%, #fff 100%); }
+
+.page { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 72px 24px 80px; }
+.eyebrow { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+h1 { font-size: clamp(2.25rem, 1.6rem + 2.6vw, 3rem); line-height: 1.04; letter-spacing: -0.032em; font-weight: 600; margin: 0; }
+.lede { max-width: 34rem; margin: 12px 0 0; font-size: clamp(1.0625rem, 1rem + .3vw, 1.1875rem); line-height: 1.5; color: var(--body); }
+h2 { font-size: 1.5rem; line-height: 1.15; letter-spacing: -0.028em; font-weight: 600; margin: 0 0 8px; }
+h3 { font-size: 13px; line-height: 20px; font-weight: 400; color: var(--muted); margin: 0 0 6px; }
+section { margin-top: 72px; }
+p.text { font-size: 15.5px; line-height: 1.65; color: var(--body); margin: 0 0 12px; }
+.note { font-size: 13px; line-height: 20px; color: var(--muted); }
+
+.pills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.pill { display: inline-flex; height: 44px; align-items: center; justify-content: center; padding: 0 20px; border-radius: 999px;
+  font: inherit; font-size: 15px; font-weight: 600; letter-spacing: -0.012em; cursor: pointer; text-decoration: none; transition: background-color .15s; }
+.pill.dark { background: #121412; color: #fff; border: 1px solid #ffffff26; box-shadow: 0 1px 2px #0000002e; }
+.pill.dark:hover { background: #2a2d2a; }
+.pill.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); }
+.pill.ghost:hover { background: #f7f6f4; }
+.pill.small { height: 32px; padding: 0 12px; font-size: 13px; }
+.pill[aria-pressed="true"] { background: #121412; color: #fff; border-color: #121412; }
+
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 40px 0 0; }
+.tile { background: var(--tile); border-radius: 18px; padding: 14px 16px; }
+.tile b { display: block; font-size: 1.5rem; line-height: 1; font-weight: 600; letter-spacing: -0.028em; font-variant-numeric: tabular-nums; }
+.tile span { display: block; margin-top: 6px; font-size: 13px; line-height: 18px; color: var(--muted); }
+
+.simulated { display: flex; gap: 12px; margin-top: 24px; font-size: 14px; line-height: 21px; color: var(--body); }
+.dash { flex: none; width: 12px; height: 1px; margin-top: 10px; background: var(--quiet); }
+
+.card { background: #ffffffd9; border: 1px solid var(--line); border-radius: 28px; padding: 24px; margin-top: 16px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.scenes { display: flex; flex-wrap: wrap; gap: 8px; }
+svg.chart { display: block; width: 100%; height: auto; touch-action: pan-y; cursor: crosshair; }
+.axis { fill: var(--quiet); font-size: 11px; font-variant-numeric: tabular-nums; }
+.player { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+input[type=range] { flex: 1; min-width: 80px; height: 24px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 1px; background: var(--line-strong); }
+input[type=range]::-moz-range-track { height: 1px; background: var(--line-strong); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; margin-top: -6px; border-radius: 50%; background: #121412; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line-strong); }
+input[type=range]::-moz-range-thumb { width: 9px; height: 9px; border-radius: 50%; background: #121412; border: 2px solid #fff; }
+.clock { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.who { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+.person { background: var(--tile); border-radius: 18px; padding: 12px 14px; min-width: 0; }
+.person .name { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.swatch { flex: none; width: 18px; height: 0; border-top: 2px solid; }
+.swatch.dashed { border-top-style: dashed; }
+.person b { display: block; margin-top: 6px; font-size: 1.25rem; line-height: 1.1; letter-spacing: -0.02em; font-weight: 600; font-variant-numeric: tabular-nums; }
+.person span.sub { display: block; margin-top: 4px; font-size: 13px; line-height: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 24px; margin-top: 24px; }
+
+.ladder { width: 100%; font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; }
+.rung { display: grid; grid-template-columns: 44px 1fr 28px; gap: 8px; align-items: center; height: 22px; color: var(--muted); }
+.rung .depth { position: relative; height: 1px; background: transparent; }
+.rung .depth i { position: absolute; left: 0; top: 0; height: 1px; background: rgba(var(--forest), .55); }
+.rung.ask .depth i { background: rgba(var(--forest), .28); }
+.rung .mark { position: absolute; top: -4px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #fff; }
+.rung .num { text-align: right; }
+.spread { height: 1px; margin: 3px 0; background: var(--line-strong); }
+
+.rows { border-top: 1px solid var(--line); margin-top: 8px; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 72px 72px; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14.5px; line-height: 22px; color: var(--body); font-variant-numeric: tabular-nums; }
+.row .n { text-align: right; }
+.row.head { color: var(--muted); font-size: 13px; }
+.row.us { color: var(--ink); font-weight: 600; }
+ul.dashes { list-style: none; margin: 12px 0 0; padding: 0; }
+ul.dashes li { display: flex; gap: 12px; font-size: 15px; line-height: 1.55; color: var(--body); margin-top: 6px; }
+ul.dashes li::before { content: ""; flex: none; width: 12px; height: 1px; margin-top: .75em; background: var(--quiet); }
+
+.trace { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px; }
+.log { max-height: 252px; overflow: auto; border-top: 1px solid var(--line); font-size: 13px; line-height: 19px; scrollbar-width: thin; }
+.log div { display: grid; grid-template-columns: 52px 1fr; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line); color: var(--quiet); font-variant-numeric: tabular-nums; }
+.log div.past { color: var(--body); }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; line-height: 20px; color: var(--quiet); overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  .page { padding: 48px 16px 64px; }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .split, .trace { grid-template-columns: 1fr; }
+  .card { padding: 16px; border-radius: 18px; }
+  .row { grid-template-columns: minmax(0, 1fr) 54px 54px 54px; gap: 8px; font-size: 13.5px; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
-<main>
-  <h1>Two simulated traders, one order</h1>
-  <p>Each trader must finish the same parent order by the same deadline. Both see the market late. Move the slider to step through one recorded run.</p>
-  <div class="banner"><strong>Simulated.</strong> Every order and fill on this page is hypothetical, and the market itself is a seeded synthetic feed. Nothing here traded, and these results say nothing about a real venue.</div>
-  <div id="result"></div>
-  <div class="controls" id="scenes"></div>
-  <div class="controls">
-    <button id="play">Play</button>
-    <input id="time" type="range" min="0" max="60" step="1" value="0" aria-label="Seconds since the order arrived">
-    <span id="clock" class="tip"></span>
-  </div>
-  <div class="grid">
-    <section class="panel">
-      <h2>Order book at this moment, as the market really stood</h2>
-      <table><thead><tr><th>Price</th><th>Lots</th></tr></thead><tbody id="ladder"></tbody></table>
-      <div class="stats" style="margin-top:12px" id="queues"></div>
+<div id="dusk" aria-hidden="true"></div>
+<svg id="ridge" aria-hidden="true" preserveAspectRatio="none"></svg>
+<div class="page">
+  <header>
+    <p class="eyebrow">Research project. Every order is simulated.</p>
+    <h1>One order, two traders</h1>
+    <p class="lede">A small order has one minute to finish. Should it rest in the queue, cross the spread, or wait? Watch two simulated traders answer that on the same recorded market.</p>
+    <div class="pills">
+      <button class="pill dark" id="hero-play">Play the replay</button>
+      <a class="pill ghost" href="#evidence">See the evidence</a>
+    </div>
+    <div class="tiles" id="tiles"></div>
+    <div class="simulated"><i class="dash"></i><span>Nothing here traded. The market is a seeded synthetic feed, so these results show that the method works, not that it would earn anything on a real venue. The hairline behind this page is that feed's midpoint for one session.</span></div>
+  </header>
+
+  <main>
+    <section id="replay" aria-labelledby="replay-title">
+      <div class="bar"><h2 id="replay-title">The replay</h2><div class="scenes" id="scenes"></div></div>
+      <p class="note" id="scene-rule"></p>
+      <div class="card">
+        <h3>Price in ticks. Fills land on the recorded market.</h3>
+        <svg class="chart" id="market" viewBox="0 0 640 240" role="img" aria-label="Midpoint and best quotes over the order's life, with each trader's fills marked"></svg>
+        <div class="player">
+          <button class="pill dark small" id="play">Play</button>
+          <input id="time" type="range" min="0" max="60" step="1" value="0" aria-label="Seconds since the order arrived">
+          <span class="clock" id="clock"></span>
+        </div>
+        <div class="who" id="who"></div>
+        <div class="split">
+          <div>
+            <h3>Order book at this moment</h3>
+            <div class="ladder" id="ladder"></div>
+          </div>
+          <div>
+            <h3>Lots left to trade</h3>
+            <svg class="chart" id="inventory" viewBox="0 0 400 104" role="img" aria-label="Lots left over time for both traders"></svg>
+            <h3 style="margin-top:14px">Cost so far, in basis points of the order</h3>
+            <svg class="chart" id="cost" viewBox="0 0 400 104" role="img" aria-label="Running cost over time for both traders"></svg>
+          </div>
+        </div>
+      </div>
+      <div class="trace" id="logs"></div>
     </section>
-    <section class="panel">
-      <div class="stats" id="legend"></div>
-      <h2>Lots left to trade</h2>
-      <svg id="inventory" viewBox="0 0 640 170" role="img" aria-label="Lots left over time for both traders"></svg>
-      <h2 style="margin-top:12px">Cost so far, in basis points of the order</h2>
-      <svg id="cost" viewBox="0 0 640 170" role="img" aria-label="Running cost over time for both traders"></svg>
-      <div class="tip" id="tip"></div>
+
+    <section id="evidence" aria-labelledby="evidence-title">
+      <h2 id="evidence-title">The evidence</h2>
+      <p class="text" id="verdict"></p>
+      <div class="rows" id="table"></div>
+      <p class="note" style="margin-top:10px" id="table-note"></p>
     </section>
-  </div>
-  <div class="columns" id="logs"></div>
+
+    <section aria-labelledby="checks-title">
+      <h2 id="checks-title">How it was checked</h2>
+      <ul class="dashes" id="checks"></ul>
+    </section>
+
+    <section aria-labelledby="limits-title">
+      <h2 id="limits-title">What this cannot tell you</h2>
+      <ul class="dashes" id="limits"></ul>
+    </section>
+  </main>
   <footer id="foot"></footer>
-</main>
+</div>
 <script>
 const DATA = /*DATA*/null;
-const LABELS = {learned: "Learned policy", immediate: "Immediate cross", equal_time: "Equal time", volume_schedule: "Volume schedule", passive_only: "Passive only", urgency: "Urgency rule"};
+const LABELS = {learned: "Learned policy", immediate: "Immediate cross", equal_time: "Equal time", volume_schedule: "Volume schedule", passive_only: "Passive only", urgency: "Urgency rule", fitted_q: "Fitted Q", hv_random: "Random", oracle_volume: "Oracle schedule"};
 const label = n => LABELS[n] || n;
 const $ = id => document.getElementById(id);
+const COLORS = ["var(--learned)", "var(--baseline)"];
+const DASHES = ["", "5 4"];
 let sceneIndex = 0, now = 0, timer = null;
 const scene = () => DATA.scenes[sceneIndex];
-const colors = ["var(--series-1)", "var(--series-2)"];
-const dash = ["", "6 4"];
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const signed = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2);
 
-function stepAt(rows, t, value, start) {
-  let current = start;
-  for (const row of rows) { if (row.t > t) break; current = value(row, current); }
-  return current;
-}
-const left = (p, t, target) => stepAt(p.fills, t, (r, c) => c - r.qty, target);
-const cost = (p, t) => stepAt(p.fills, t, r => r.cost_bps, 0);
-
-function drawChart(svg, series, yMax, yMin, format) {
-  const W = 640, H = 170, L = 44, R = 12, T = 8, B = 22;
-  const horizon = scene().horizon_s;
-  const x = t => L + (W - L - R) * t / horizon;
-  const y = v => T + (H - T - B) * (yMax - v) / (yMax - yMin || 1);
+/* The hairline behind the page: one session's real midpoint, with fading contours below it. */
+function drawRidge() {
+  const svg = $("ridge"), w = innerWidth, h = innerHeight, mids = DATA.ridge;
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  const lo = Math.min(...mids), hi = Math.max(...mids), n = mids.length - 1;
+  const horizon = h * 0.62, rise = h * 0.3;
+  const path = (lift, scale) => mids.map((m, i) => `${i ? "L" : "M"}${(i / n * w).toFixed(1)} ${(horizon + lift - (m - lo) / (hi - lo || 1) * rise * scale).toFixed(1)}`).join("");
   let out = "";
-  for (let i = 0; i <= 3; i++) {
-    const v = yMin + (yMax - yMin) * i / 3;
-    out += `<line class="grid-line" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>`;
-    out += `<text class="axis" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${format(v)}</text>`;
-  }
-  for (let t = 0; t <= horizon; t += 15) out += `<text class="axis" x="${x(t)}" y="${H - 6}" text-anchor="middle">${t}s</text>`;
-  series.forEach((points, i) => {
-    let path = "";
-    points.forEach((p, k) => {
-      if (k) path += `H${x(p[0]).toFixed(1)}`;
-      path += `${k ? "V" : "M" + x(p[0]).toFixed(1) + " "}${y(p[1]).toFixed(1)}`;
-    });
-    out += `<path d="${path}" fill="none" stroke="${colors[i]}" stroke-width="2" stroke-dasharray="${dash[i]}"/>`;
+  const contours = [[0, 1, .34], [14, .92, .16], [32, .8, .11], [54, .66, .08], [80, .5, .06], [112, .34, .045], [150, .18, .035], [196, .06, .03]];
+  contours.forEach(([lift, scale, alpha], i) => {
+    out += `<path class="c" d="${path(lift, scale)}" fill="none" stroke="rgba(29,58,42,${alpha})" stroke-width=".75" vector-effect="non-scaling-stroke" style="--d:${i * 120}ms"/>`;
   });
-  out += `<line x1="${x(now)}" x2="${x(now)}" y1="${T}" y2="${H - B}" stroke="var(--ink-3)" stroke-width="1"/>`;
+  svg.innerHTML = out;
+  if (reduceMotion) return;
+  svg.querySelectorAll("path").forEach(p => {
+    const length = p.getTotalLength();
+    p.style.strokeDasharray = length;
+    p.animate([{strokeDashoffset: length}, {strokeDashoffset: 0}], {duration: 2600, delay: parseFloat(p.style.getPropertyValue("--d")), easing: "cubic-bezier(.4,0,.2,1)", fill: "both"});
+  });
+}
+
+function stepped(rows, x, y) {
+  return rows.map((r, i) => i ? `H${x(r[0]).toFixed(1)}V${y(r[1]).toFixed(1)}` : `M${x(r[0]).toFixed(1)} ${y(r[1]).toFixed(1)}`).join("");
+}
+
+function drawMarket() {
+  const s = scene(), W = 640, H = 240, L = 42, R = 8, T = 8, B = 20, book = s.book;
+  const prices = book.flatMap(r => [r.bid, r.ask]).concat(s.policies.flatMap(p => p.fills.map(f => f.price)));
+  const lo = Math.min(...prices) - 1, hi = Math.max(...prices) + 1;
+  const x = t => L + (W - L - R) * t / s.horizon_s, y = v => T + (H - T - B) * (hi - v) / (hi - lo);
+  let out = "";
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const v = Math.round(lo + (hi - lo) * i / ticks);
+    out += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text class="axis" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  }
+  for (let t = 0; t <= s.horizon_s; t += 15) out += `<text class="axis" x="${x(t)}" y="${H - 4}" text-anchor="middle">${t} s</text>`;
+  /* Bid and ask are hairlines. The band between them is the spread a cross must pay. */
+  const quote = key => stepped(book.map(r => [r.t, r[key]]), x, y);
+  out += `<path d="${quote("ask")}" fill="none" stroke="rgba(29,58,42,.38)" stroke-width=".75"/>`;
+  out += `<path d="${quote("bid")}" fill="none" stroke="rgba(29,58,42,.38)" stroke-width=".75"/>`;
+  out += `<line x1="${L}" x2="${W - R}" y1="${y(s.arrival_mid)}" y2="${y(s.arrival_mid)}" stroke="var(--quiet)" stroke-dasharray="1 3"/>`;
+  out += `<text class="axis" x="${W - R}" y="${y(s.arrival_mid) - 5}" text-anchor="end">arrival</text>`;
+  s.policies.forEach((p, i) => {
+    p.fills.forEach(f => {
+      const hollow = f.role === "maker", size = Math.max(3.5, Math.min(7, 2.5 + Math.sqrt(f.qty) * .7));
+      const past = f.t <= now ? 1 : .22;
+      out += `<circle cx="${x(f.t).toFixed(1)}" cy="${y(f.price).toFixed(1)}" r="${size.toFixed(1)}" fill="${hollow ? "#fff" : COLORS[i]}" stroke="${COLORS[i]}" stroke-width="1.5" opacity="${past}"><title>${label(p.name)}: ${f.role} fill, ${f.qty} lots at ${f.price}, ${f.t.toFixed(2)} s</title></circle>`;
+    });
+  });
+  out += `<line x1="${x(now)}" x2="${x(now)}" y1="${T}" y2="${H - B}" stroke="var(--ink)" stroke-width=".75"/>`;
+  $("market").innerHTML = out;
+}
+
+function lineChart(svg, series, yMax, yMin, format) {
+  const W = 400, H = 104, L = 34, R = 4, T = 6, B = 16, horizon = scene().horizon_s;
+  const x = t => L + (W - L - R) * t / horizon, y = v => T + (H - T - B) * (yMax - v) / (yMax - yMin || 1);
+  let out = "";
+  for (let i = 0; i <= 2; i++) {
+    const v = yMin + (yMax - yMin) * i / 2;
+    out += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text class="axis" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${format(v)}</text>`;
+  }
+  series.forEach((rows, i) => { out += `<path d="${stepped(rows, x, y)}" fill="none" stroke="${COLORS[i]}" stroke-width="1.5" stroke-dasharray="${DASHES[i]}"/>`; });
+  out += `<line x1="${x(now)}" x2="${x(now)}" y1="${T}" y2="${H - B}" stroke="var(--ink)" stroke-width=".75"/>`;
   svg.innerHTML = out;
 }
 
-function steps(p, target, value) {
-  const horizon = scene().horizon_s, rows = [[0, target]];
+const lotsLeft = (p, t, total) => p.fills.filter(f => f.t <= t).reduce((left, f) => left - f.qty, total);
+const costAt = (p, t) => { let c = 0; for (const f of p.fills) { if (f.t > t) break; c = f.cost_bps; } return c; };
+function pathOf(p, start, value) {
+  const horizon = scene().horizon_s, rows = [[0, start]];
   for (const f of p.fills) rows.push([Math.min(f.t, horizon), value(f, rows[rows.length - 1][1])]);
   rows.push([horizon, rows[rows.length - 1][1]]);
   return rows;
 }
 
-function render() {
-  const s = scene(), [a, b] = s.policies;
-  $("time").max = s.horizon_s;
-  $("clock").textContent = `${now.toFixed(0)} s of ${s.horizon_s.toFixed(0)} s`;
-  const snap = s.book.filter(r => r.t <= now).pop() || s.book[0];
-  const asks = snap.asks.slice().reverse().map(l => `<tr class="ask"><td>${l[0]}</td><td>${l[1]}</td></tr>`);
-  const bids = snap.bids.map(l => `<tr class="bid"><td>${l[0]}</td><td>${l[1]}</td></tr>`);
-  $("ladder").innerHTML = asks.concat(bids).join("");
-  $("queues").innerHTML = s.policies.map(p => {
-    const q = p.queue.filter(r => r.t <= now).pop();
-    const fresh = q && now - q.t <= 1.5;
-    return `<div class="stat"><span>${label(p.name)} queue</span><b>${fresh ? q.ahead + " lots" : "None"}</b><span>${fresh ? "ahead at " + q.price : "no resting order"}</span></div>`;
+function queueAt(p) {
+  const q = p.queue.filter(r => r.t <= now).pop();
+  return q && now - q.t <= 1.5 ? q : null;
+}
+
+function drawLadder() {
+  const s = scene(), snap = s.book.filter(r => r.t <= now).pop() || s.book[0];
+  const max = Math.max(...snap.asks.concat(snap.bids).map(l => l[1]), 1);
+  const rung = (side, l) => {
+    const marks = s.policies.map((p, i) => {
+      const q = queueAt(p);
+      if (!q || q.price !== l[0]) return "";
+      const at = Math.min(96, q.ahead / max * 100);
+      return `<i class="mark" title="${label(p.name)}: ${q.ahead} lots ahead" style="left:calc(${at}% - 4px);background:${COLORS[i]}"></i>`;
+    }).join("");
+    return `<div class="rung ${side}"><span>${l[0]}</span><div class="depth"><i style="width:${(l[1] / max * 100).toFixed(1)}%"></i>${marks}</div><span class="num">${l[1]}</span></div>`;
+  };
+  $("ladder").innerHTML = snap.asks.slice(0, 5).reverse().map(l => rung("ask", l)).join("") + `<div class="spread"></div>` + snap.bids.slice(0, 5).map(l => rung("bid", l)).join("");
+}
+
+function traceLine(e) {
+  let text = null;
+  if (e.what === "decision" && e.intent) {
+    const verb = {REST: "Rest", CROSS: "Cross", WAIT: "Wait"}[e.intent[0]] || e.intent[0];
+    text = verb + (e.intent[1] ? ` ${e.intent[1]}` : "") + (e.p_fill !== undefined ? `, fill chance ${(e.p_fill * 100).toFixed(0)}%` : e.rule ? `, ${e.rule}` : "");
+  }
+  if (e.what === "fill") text = `${e.role[0].toUpperCase() + e.role.slice(1)} fill, ${e.qty} at ${e.price}`;
+  if (e.what === "rest") text = `In the queue, ${e.queue_ahead} lots ahead`;
+  if (e.what === "cancelled") text = `Cancel landed, ${e.lots} lots pulled`;
+  if (e.what === "complete") text = `Complete, ${e.filled} lots`;
+  return text;
+}
+
+function drawTrace() {
+  const s = scene();
+  $("logs").innerHTML = s.policies.map(p => {
+    const rows = p.events.map(e => [e.t, traceLine(e)]).filter(r => r[1]);
+    const seen = new Set(), unique = rows.filter(r => { const k = r[1].replace(/, fill chance.*/, ""); const key = k + (r[1].startsWith("Rest") ? "" : r[0]); if (seen.has(key)) return false; seen.add(key); return true; });
+    return `<div><h3>${label(p.name)}: event trace</h3><div class="log">${unique.map(r => `<div class="${r[0] <= now ? "past" : ""}"><span>${r[0].toFixed(2)} s</span><span>${r[1]}</span></div>`).join("")}</div></div>`;
   }).join("");
-  $("legend").innerHTML = s.policies.map((p, i) => `<div class="stat"><span><i class="key" style="background:${colors[i]}"></i>${label(p.name)}</span><b>${p.shortfall_bps.toFixed(2)} bps</b><span>final cost of this order</span></div>`).join("");
-  drawChart($("inventory"), s.policies.map(p => steps(p, s.target_lots, (f, c) => c - f.qty)), s.target_lots, 0, v => v.toFixed(0));
-  const costSeries = s.policies.map(p => steps(p, 0, f => f.cost_bps));
-  const all = costSeries.flat().map(r => r[1]).concat([0]);
-  drawChart($("cost"), costSeries, Math.max(...all), Math.min(...all), v => v.toFixed(1));
-  $("tip").textContent = `At ${now.toFixed(0)} s. ` + s.policies.map(p => `${label(p.name)}: ${left(p, now, s.target_lots)} lots left, ${cost(p, now).toFixed(2)} bps so far.`).join(" ");
-  $("logs").innerHTML = s.policies.map(p => `<section class="panel"><h2><i class="key" style="background:${colors[s.policies.indexOf(p)]}"></i>${label(p.name)} event trace</h2><div class="log">${p.events.filter(e => !(e.what === "decision" && e.intent === null)).map(line).join("")}</div></section>`).join("");
 }
 
-function line(e) {
-  const past = e.t <= now ? " past" : "";
-  let text = e.what;
-  if (e.what === "decision" && e.intent) text = `decide ${e.intent[0].toLowerCase()}${e.intent[1] ? " " + e.intent[1] : ""}` + (e.p_fill !== undefined ? ` (fill chance ${(e.p_fill * 100).toFixed(0)}%)` : e.rule ? ` (${e.rule})` : "");
-  if (e.what === "fill") text = `${e.role} fill ${e.qty} at ${e.price}`;
-  if (e.what === "send") text = `send ${e.lots} at ${e.price}${e.immediate ? ", cross" : ", rest"}`;
-  if (e.what === "rest") text = `resting, ${e.queue_ahead} lots ahead`;
-  if (e.what === "cancel_request") text = "cancel requested";
-  if (e.what === "cancelled") text = `cancel landed, ${e.lots} lots pulled`;
-  if (e.what === "complete") text = `complete, ${e.filled} lots`;
-  return `<div class="${past}">${e.t.toFixed(3)} s: ${text}</div>`;
+function render() {
+  const s = scene();
+  $("time").max = s.horizon_s;
+  $("clock").textContent = `${now.toFixed(0)} of ${s.horizon_s.toFixed(0)} s`;
+  drawMarket();
+  drawLadder();
+  $("who").innerHTML = s.policies.map((p, i) => {
+    const q = queueAt(p);
+    return `<div class="person"><div class="name"><i class="swatch ${i ? "dashed" : ""}" style="border-color:${COLORS[i]}"></i>${label(p.name)}</div><b>${signed(p.shortfall_bps)} bps</b><span class="sub">${lotsLeft(p, now, s.target_lots)} lots left, ${q ? q.ahead + " ahead in queue" : "not resting"}</span></div>`;
+  }).join("");
+  lineChart($("inventory"), s.policies.map(p => pathOf(p, s.target_lots, (f, c) => c - f.qty)), s.target_lots, 0, v => v.toFixed(0));
+  const costs = s.policies.map(p => pathOf(p, 0, f => f.cost_bps));
+  const values = costs.flat().map(r => r[1]).concat([0]);
+  lineChart($("cost"), costs, Math.max(...values), Math.min(...values), v => v.toFixed(1));
 }
 
-function pointerToTime(svg, event) {
-  const box = svg.getBoundingClientRect(), left = 44 / 640, right = 12 / 640;
-  const f = ((event.clientX - box.left) / box.width - left) / (1 - left - right);
-  now = Math.round(Math.max(0, Math.min(1, f)) * scene().horizon_s);
-  $("time").value = now;
-  render();
+function setTime(t) { now = t; $("time").value = t; render(); }
+function pointer(svg, e, left, right, width) {
+  const box = svg.getBoundingClientRect(), a = left / width, b = right / width;
+  const f = ((e.clientX - box.left) / box.width - a) / (1 - a - b);
+  setTime(Math.round(Math.max(0, Math.min(1, f)) * scene().horizon_s));
+}
+function stop() { clearInterval(timer); timer = null; $("play").textContent = "Play"; }
+function play() {
+  if (timer) return stop();
+  if (now >= scene().horizon_s) setTime(0);
+  $("play").textContent = "Pause";
+  timer = setInterval(() => { now >= scene().horizon_s ? stop() : setTime(now + 1); drawTraceMarks(); }, 260);
+}
+function drawTraceMarks() { drawTrace(); }
+
+function evidence() {
+  const v = DATA.verdict, base = label(DATA.baseline).toLowerCase();
+  $("tiles").innerHTML = DATA.tiles.map(t => `<div class="tile"><b>${t.value}</b><span>${t.label}</span></div>`).join("");
+  $("verdict").textContent = v.sentence;
+  const head = `<div class="row head"><span>Strategy, ${DATA.table.parents} paired orders on ${DATA.table.days} test days</span><span class="n">Mean bps</span><span class="n">P95 bps</span><span class="n">Forced</span></div>`;
+  $("table").innerHTML = head + DATA.table.rows.map(r => `<div class="row ${r.name === "learned" ? "us" : ""}"><span>${label(r.name)}</span><span class="n">${signed(r.mean)}</span><span class="n">${signed(r.p95)}</span><span class="n">${r.forced.toFixed(1)}%</span></div>`).join("");
+  $("table-note").textContent = DATA.table.note;
+  $("checks").innerHTML = DATA.checks.map(c => `<li><span>${c}</span></li>`).join("");
+  $("limits").innerHTML = DATA.limits.map(c => `<li><span>${c}</span></li>`).join("");
+  $("foot").textContent = `Generated from run ${DATA.commit.slice(0, 12)} with inputs ${DATA.input_sha256.slice(0, 12)}. Prices in ticks, sizes in lots. All orders simulated.`;
 }
 
 function init() {
-  const s = DATA.summary;
-  $("result").innerHTML = `<p>Across ${s.parents} paired orders on ${s.days} test days, the learned policy minus ${label(DATA.baseline).toLowerCase()} averaged ${s.mean_diff_bps.toFixed(3)} bps (95% interval ${s.ci_low.toFixed(3)} to ${s.ci_high.toFixed(3)}, resampling days). ${s.improved ? "That passed the rule frozen before the test." : "That did not pass the rule frozen before the test."}</p>`;
-  $("scenes").innerHTML = DATA.scenes.map((sc, i) => `<button data-i="${i}" aria-pressed="${i === 0}">${sc.title}</button>`).join("");
+  evidence();
+  $("scenes").innerHTML = DATA.scenes.map((sc, i) => `<button class="pill ghost small" data-i="${i}" aria-pressed="${i === 0}">${sc.title}</button>`).join("");
+  $("scene-rule").textContent = scene().rule;
   $("scenes").onclick = e => {
     if (e.target.dataset.i === undefined) return;
-    sceneIndex = +e.target.dataset.i; now = 0; $("time").value = 0;
+    stop();
+    sceneIndex = +e.target.dataset.i;
     [...$("scenes").children].forEach((b, i) => b.setAttribute("aria-pressed", i === sceneIndex));
-    render();
+    $("scene-rule").textContent = scene().rule;
+    now = 0; $("time").value = 0; render(); drawTrace();
   };
-  $("time").oninput = e => { now = +e.target.value; render(); };
-  $("play").onclick = () => {
-    if (timer) { clearInterval(timer); timer = null; $("play").textContent = "Play"; return; }
-    $("play").textContent = "Pause";
-    timer = setInterval(() => {
-      now += 1;
-      if (now > scene().horizon_s) { now = scene().horizon_s; clearInterval(timer); timer = null; $("play").textContent = "Play"; }
-      $("time").value = now; render();
-    }, 250);
-  };
-  for (const id of ["inventory", "cost"]) $(id).addEventListener("pointermove", e => pointerToTime($(id), e));
-  $("foot").textContent = `Scene rule: ${scene().rule}. Generated from run ${DATA.commit.slice(0, 12)}, inputs ${DATA.input_sha256.slice(0, 12)}. Prices in ticks, sizes in lots.`;
-  render();
+  $("time").oninput = e => { stop(); now = +e.target.value; render(); drawTrace(); };
+  $("play").onclick = play;
+  $("hero-play").onclick = () => { $("replay").scrollIntoView({behavior: reduceMotion ? "auto" : "smooth"}); if (!timer) { now = 0; play(); } };
+  $("market").addEventListener("pointermove", e => { stop(); pointer($("market"), e, 42, 8, 640); drawTrace(); });
+  for (const id of ["inventory", "cost"]) $(id).addEventListener("pointermove", e => { stop(); pointer($(id), e, 34, 4, 400); drawTrace(); });
+  render(); drawTrace(); drawRidge();
+  addEventListener("resize", drawRidge);
 }
 init();
 </script>

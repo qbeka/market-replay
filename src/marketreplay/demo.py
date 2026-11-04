@@ -19,7 +19,7 @@ from .features import mid
 from .metrics import shortfall_bps
 from .pipeline import FREEZE_PATH, RESULTS, load_fitted
 from .roster import build
-from .study import REPO, Study, load_day, parents_for_day
+from .study import REPO, Study, ensure_data, load_day, parents_for_day
 
 TEMPLATE = REPO / "site" / "template.html"
 OUTPUT = REPO / "site" / "index.html"
@@ -82,10 +82,11 @@ def scene_data(study: Study, fitted, scene: dict, baseline: str) -> dict:
             "t": round((s.ts_ns - start) / 1e9, 3),
             "bids": [list(level) for level in s.bids],
             "asks": [list(level) for level in s.asks],
-            "mid": mid(s),
+            "bid": s.bids[0][0] if s.bids else None,
+            "ask": s.asks[0][0] if s.asks else None,
         }
         for s in snapshots
-        if start <= s.ts_ns <= end
+        if start <= s.ts_ns <= end and s.bids and s.asks
     ]
     policies = []
     for name, run in zip(names, runs):
@@ -119,6 +120,70 @@ def scene_data(study: Study, fitted, scene: dict, baseline: str) -> dict:
     }
 
 
+def session_ridge(snapshots: list, points: int = 240) -> list[float]:
+    """One session's midpoint, thinned for the hairline behind the page."""
+    mids = [m for m in (mid(s) for s in snapshots) if m is not None]
+    step = max(1, len(mids) // points)
+    return mids[::step]
+
+
+def compact(value: float) -> str:
+    """11648571 -> 11.6M. Tile numbers stay short and keep one decimal."""
+    for size, suffix in ((1e6, "M"), (1e3, "K")):
+        if abs(value) >= size:
+            return f"{value / size:.1f}{suffix}"
+    return f"{value:.0f}"
+
+
+def verdict_sentence(verdict: dict, baseline: str) -> str:
+    paired = verdict["paired"]
+    name = baseline.replace("_", " ")
+    span = f"{paired['mean_diff_bps']:+.3f} bps (95% interval {paired['ci_low']:.3f} to {paired['ci_high']:.3f}), resampling {paired['days']} days"
+    if verdict["improved"]:
+        return f"The learned policy passed the rule frozen before the test. Against the {name} rule it averaged {span}, with no worse tail and no more forced completion."
+    failed = ", ".join(key.replace("_", " ") for key, ok in verdict["checks"].items() if not ok)
+    return f"The learned policy did not pass the rule frozen before the test. Against the {name} rule it averaged {span}. Failed: {failed}. A negative result is a valid finding."
+
+
+def page_content(final: dict, frozen: dict, stress: dict, profile: dict, fuzz: dict, evidence: dict, events: int) -> dict:
+    """Every sentence and number on the page, read from saved results."""
+    summaries = final["summaries"]
+    order = sorted((n for n in summaries if n != "oracle_volume"), key=lambda n: summaries[n]["mean_bps"])
+    learned = summaries["learned"]
+    paired = final["verdict"]["paired"]
+    changed = sum(1 for e in stress["scenarios"].values() if e["conclusion_changes"])
+    return {
+        "tiles": [
+            {"value": compact(events), "label": "order events replayed"},
+            {"value": f"{learned['parents']:,}", "label": f"paired orders, {learned['days']} test days"},
+            {"value": f"{compact(profile['compiled_book']['events_per_s'])}/s", "label": "events on one core, in C"},
+            {"value": str(fuzz["ledger_divergences"] + fuzz["book_divergences"]), "label": f"divergences in {compact(fuzz['cases'])} fuzz cases"},
+        ],
+        "verdict": {"sentence": verdict_sentence(final["verdict"], frozen["best_baseline"])},
+        "table": {
+            "parents": learned["parents"],
+            "days": learned["days"],
+            "rows": [
+                {"name": n, "mean": summaries[n]["mean_bps"], "p95": summaries[n]["p95_bps"], "forced": summaries[n]["forced_lot_pct"]}
+                for n in order
+            ],
+            "note": f"Positive numbers are costs. Forced means lots bought by the deadline rule. Under {len(stress['scenarios']) - 1} moved fill assumptions, the paired result changes sign in {changed}.",
+        },
+        "checks": [
+            f"{evidence['tests']} tests at {evidence['coverage_pct']}% line coverage, starting from a hand-worked trace with an assertion for every book state.",
+            f"The compiled C replay matches the Python reference byte for byte, with {fuzz['ledger_divergences'] + fuzz['book_divergences']} divergences in {fuzz['cases']:,} hostile fuzz cases under AddressSanitizer and UBSan.",
+            "Strategies receive only delayed data. A test rewrites the future and requires every earlier view to stay identical.",
+            f"The hypothesis, split and decision rule were committed before any test day was read. The interval resamples whole days, {paired['days']} of them.",
+            "An independent review found three biases before the freeze. Each one became a failing test, then a fix.",
+        ],
+        "limits": [
+            "Market impact. The feed is fixed, so a simulated order never moves a price and nobody reacts to it.",
+            "A real venue. The feed is a seeded synthetic market, and its signal strength was set by this project.",
+            "Queue reality. Fills come from a queue model, so the stress tests show how much the answer depends on it.",
+        ],
+    }
+
+
 def write_demo(study: Study) -> str:
     frozen = json.loads(FREEZE_PATH.read_text())
     baseline = frozen["best_baseline"]
@@ -126,19 +191,19 @@ def write_demo(study: Study) -> str:
     rows = read_rows(RESULTS / "raw" / "test.csv")
     scenes = [scene_data(study, fitted, scene, baseline) for scene in choose_scenes(rows, baseline)]
     final = json.loads((RESULTS / "final.json").read_text())
+    stress = json.loads((RESULTS / "stress.json").read_text())
+    profile = json.loads((RESULTS / "profile.json").read_text())
+    fuzz = json.loads((RESULTS / "fuzz.json").read_text())
+    evidence = json.loads((RESULTS / "evidence.json").read_text())
+    day = scenes[0]["day"]
+    snapshots = replay_session(load_day(study.plan, day), [], fitted.config)[1]
     payload = {
         "scenes": scenes,
         "baseline": baseline,
+        "ridge": session_ridge(snapshots),
         "commit": final["manifest"]["commit"],
         "input_sha256": final["manifest"]["input_sha256"],
-        "summary": {
-            "days": final["verdict"]["paired"]["days"],
-            "parents": final["summaries"]["learned"]["parents"],
-            "mean_diff_bps": final["verdict"]["paired"]["mean_diff_bps"],
-            "ci_low": final["verdict"]["paired"]["ci_low"],
-            "ci_high": final["verdict"]["paired"]["ci_high"],
-            "improved": final["verdict"]["improved"],
-        },
+        **page_content(final, frozen, stress, profile, fuzz, evidence, ensure_data(study.plan)["events"]),
     }
     (RESULTS / "demo_run.json").write_text(json.dumps(payload, indent=1) + "\n")
     html = TEMPLATE.read_text().replace("/*DATA*/null", json.dumps(payload, separators=(",", ":")))

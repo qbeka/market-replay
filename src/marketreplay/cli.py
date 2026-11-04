@@ -23,7 +23,8 @@ def main() -> None:
         ("profile", "measure speed and memory, Python against compiled"),
         ("report", "write docs/report.md and the plots from saved results"),
         ("demo", "write the offline website demo from a recorded run"),
-        ("benchmark", "run final, stress, profile, report and demo in order"),
+        ("evidence", "run the test suite and record its count and coverage"),
+        ("benchmark", "run final, stress, profile, fuzz, evidence, report and demo in order"),
     ]:
         commands.add_parser(name, help=text)
     fuzz = commands.add_parser("fuzz", help="differential fuzz of C against Python under sanitizers")
@@ -83,13 +84,22 @@ def main() -> None:
         from .tracing import print_trace
 
         print_trace(study, args.day, args.parent, args.strategy)
+    elif args.command == "evidence":
+        from .evidence import record_evidence
+
+        print(json.dumps(record_evidence(), indent=2))
     elif args.command == "benchmark":
         from .demo import write_demo
+        from .evidence import record_evidence
+        from .fuzz import run_fuzz
+        from .pipeline import RESULTS
         from .profile import profile
         from .report import write_report
 
         final(study)
         stress(study)
         profile(study)
+        run_fuzz(100_000, RESULTS / "fuzz.json")
+        record_evidence()
         print(write_report(study))
         print(write_demo(study))
