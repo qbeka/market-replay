@@ -640,7 +640,10 @@ def run_session(events: list[Event], work: list[tuple[Parent, Strategy]], config
     for run in runs:
         engine.at(run.parent.start_ns, engine.activate, run)
     if events:
-        engine.at(events[0].ts_ns, engine.capture, events[-1].ts_ns)
+        # Offset the grid so a decision on a whole interval sees a snapshot exactly
+        # obs_latency_ns old. Otherwise grid spacing would hide the latency being studied.
+        offset = -config.obs_latency_ns % config.snapshot_interval_ns
+        engine.at(events[0].ts_ns + offset, engine.capture, events[-1].ts_ns)
     replay_apply = engine.replay.apply
     heap = engine.heap
     for event in events:

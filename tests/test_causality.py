@@ -138,3 +138,10 @@ def test_replay_is_deterministic():
     assert results[0] == results[1]
 
 
+
+
+def test_a_decision_sees_a_snapshot_exactly_one_observation_latency_old():
+    config = ExecConfig(obs_latency_ns=3, decision_interval_ns=20, snapshot_interval_ns=10)
+    spy = Spy(1)
+    run_session(random_feed(1), [(Parent(1, Side.BID, 30, 100, 1500), spy)], config)
+    assert spy.seen and all(v.market.ts_ns == v.now_ns - 3 for v in spy.seen)
