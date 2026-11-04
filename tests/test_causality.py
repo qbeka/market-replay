@@ -115,7 +115,7 @@ def test_changing_the_future_cannot_change_past_decisions():
         before = [v for v in spy_a.seen if v.market.ts_ns < cut]
         twins = [v for v in spy_b.seen if v.market.ts_ns < cut]
         for a, b in zip(before, twins):
-            assert (a.now_ns, a.market, a.filled_seen, a.open_seen) == (b.now_ns, b.market, b.filled_seen, b.open_seen)
+            assert a == b  # Every field: market, history, fills, open lots and queue state.
 
 
 def test_random_runs_conserve_everything_and_always_complete():

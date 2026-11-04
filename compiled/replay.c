@@ -192,13 +192,18 @@ static int book_reduce(const Event *e) {
     return 0;
 }
 
+static int size_up_loses = 1, size_down_loses = 0;
+
 static inline int loses_priority(const Event *e, const Order *o) {
-    return e->price != o->price || e->qty > o->qty;
+    if (e->price != o->price) return 1;
+    if (e->qty > o->qty) return size_up_loses;
+    if (e->qty < o->qty) return size_down_loses;
+    return 0;
 }
 
 static int book_modify(const Event *e) {
     Order *o = find_order(e->order_id);
-    if (!o) return 1;
+    if (!o || e->side != o->side) return 1;
     if (loses_priority(e, o)) {
         int side = o->side;
         remove_order(o);
@@ -262,7 +267,7 @@ typedef struct Run {
     struct Child **children; int child_count, child_cap;
     Consumed *consumed; int consumed_count, consumed_cap;
     Ring window; i64 window_lots;
-    i64 budget, budget_seq;
+    i64 budget, budget_stamp;
 } Run;
 
 typedef struct Child {
@@ -276,6 +281,8 @@ static Child *active[2][MAX_ACTIVE]; static int active_count[2];
 static Run *live_runs[MAX_ACTIVE]; static int live_count;
 static int halted;
 static Ring cap_tape; static i64 cap_tape_lots;
+static i64 feed_index; /* Identifies one historical trade within a ledger's budget. */
+static i64 last_best[2]; static int have_last[2];
 
 static void ring_push(Ring *r, i64 ts, i64 qty) {
     if (r->tail == r->cap) {
@@ -367,8 +374,9 @@ static void historical_trade(const Event *e) {
         i64 passing = e->qty;
         if (improvement > 0) c->ahead = 0;
         else if (cfg.trade_through_only) continue;
+        else if (e->kind == TRADE_HIDDEN) { if (c->ahead > 0) continue; }
         else { i64 burned = min64(c->ahead, passing); c->ahead -= burned; passing -= burned; }
-        if (r->budget_seq != e->seq) { r->budget_seq = e->seq; r->budget = e->qty; }
+        if (r->budget_stamp != feed_index) { r->budget_stamp = feed_index; r->budget = e->qty; }
         i64 qty = min64(min64(passing, c->lots - c->filled), min64(r->budget, r->target - r->filled));
         if (qty > 0) qty = capped(r, e->ts_ns, qty);
         if (qty > 0) { r->budget -= qty; fill_passive(c, e->ts_ns, qty, e->seq); }
@@ -432,6 +440,10 @@ static void exclude_run(Run *r, const char *reason) {
 
 static void after_feed(const Event *e) {
     if (e->kind == HALT_START) halted = 1; else if (e->kind == HALT_END) halted = 0;
+    if (live_count) {
+        if (has_best(BID)) { last_best[0] = best(BID); have_last[0] = 1; }
+        if (has_best(ASK)) { last_best[1] = best(ASK); have_last[1] = 1; }
+    }
     if ((halted || !valid) && live_count) {
         const char *reason = halted ? "halt" : "invalid book";
         while (live_count) exclude_run(live_runs[0], reason);
@@ -557,7 +569,7 @@ static void deadline(i64 now, Run *r) {
         if (qty) { commit_consumption(r, l, qty); force(now, r, l->price, qty); }
     }
     if (r->target - r->filled > 0) {
-        i64 base = have_worst ? worst : floor_div(r->mid_x2 + 1, 2);
+        i64 base = have_worst ? worst : have_last[s] ? last_best[s] : floor_div(r->mid_x2 + 1, 2);
         force(now, r, base + r->side * cfg.extra_ticks, r->target - r->filled);
     }
     for (int i = 0; i < live_count; i++) {
@@ -570,6 +582,8 @@ static void activate(i64 now, Run *r) {
     if (!valid || halted) { r->excluded = halted ? "halt" : "invalid book"; r->finished = 1; return; }
     if (!has_best(BID) || !has_best(ASK)) { r->excluded = "one-sided book at arrival"; r->finished = 1; return; }
     r->mid_x2 = best(BID) + best(ASK);
+    last_best[0] = best(BID); last_best[1] = best(ASK); have_last[0] = have_last[1] = 1;
+    if (live_count == MAX_ACTIVE) { fprintf(stderr, "too many live parents\n"); exit(2); }
     live_runs[live_count++] = r;
     (void)now;
 }
@@ -645,6 +659,8 @@ static void set_config(const char *key, i64 v) {
     else if (!strcmp(key, "extra_ticks")) cfg.extra_ticks = v;
     else if (!strcmp(key, "take_levels")) cfg.take_levels = v;
     else if (!strcmp(key, "trade_through_only")) cfg.trade_through_only = (int)v;
+    else if (!strcmp(key, "size_up_loses")) size_up_loses = (int)v;
+    else if (!strcmp(key, "size_down_loses")) size_down_loses = (int)v;
     else if (!strcmp(key, "order_latency") || !strcmp(key, "cancel_latency")) { }
     else { fprintf(stderr, "unknown option %s\n", key); exit(2); }
 }
@@ -670,7 +686,7 @@ static void read_tape(const char *path) {
             if (fscanf(f, "%d %d %" SCNd64 " %" SCNd64 " %" SCNd64, &index, &side, &target, &start, &end) != 5) exit(2);
             Run *r = &runs[index];
             r->index = index; r->side = side; r->target = target; r->start = start; r->deadline = end;
-            r->budget_seq = -1;
+            r->budget_stamp = -1;
             schedule(start, DO_ACTIVATE, r);
             /* Every P line precedes every S line, so at equal times the deadline runs
              * before an arrival, as it does in Python. */
@@ -709,6 +725,7 @@ static int exec_mode(int argc, char **argv) {
     double start = seconds();
     for (size_t i = 0; i < n; i++) {
         const Event *e = &events[i];
+        feed_index = (i64)i;
         if (heap_len && heap[0].ts < e->ts_ns) run_until(e->ts_ns);
         on_feed(e);
         guard_apply(e);

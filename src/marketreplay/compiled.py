@@ -56,6 +56,8 @@ def options(config: ExecConfig) -> list[str]:
         "extra_ticks": config.unfilled_extra_ticks,
         "take_levels": config.book_levels * 4,
         "trade_through_only": int(config.trade_through_only),
+        "size_up_loses": int(config.priority.size_increase_loses_priority),
+        "size_down_loses": int(config.priority.size_decrease_loses_priority),
         "order_latency": config.order_latency_ns,
         "cancel_latency": config.cancel_latency_ns,
     }

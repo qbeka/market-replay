@@ -106,7 +106,7 @@ class View:
 
     now_ns: int
     parent: Parent
-    arrival_mid_x2: int
+    arrival_mid_seen: float | None  # Midpoint at the first decision, from the delayed snapshot.
     market: Snapshot
     history: list[Snapshot]  # Observable snapshots, oldest first, ending at market.
     filled_seen: int
@@ -186,6 +186,7 @@ class Run:
     consumed: dict = field(default_factory=dict)  # order_id -> lots this ledger took
     own_window: deque = field(default_factory=deque)  # (ts_ns, qty)
     own_window_lots: int = 0
+    arrival_mid_seen: float | None = None
     trace: list = field(default_factory=list)
 
     def log(self, ts_ns: int, what: str, **detail) -> None:
@@ -206,6 +207,7 @@ class Engine:
         self.snapshots: list[Snapshot] = []
         self.visible_snapshots = 0  # Moves forward only, so lookups stay cheap.
         self.halted = False
+        self.last_best: dict[int, int | None] = {Side.BID: None, Side.ASK: None}
         self.cum_lots = 0
         self.tape: deque = deque()  # (ts_ns, aggressor_side, lots) for trade flow.
         self.tape_buy = 0
@@ -248,6 +250,11 @@ class Engine:
             self.halted = True
         elif e.kind == Kind.HALT_END:
             self.halted = False
+        if self.live_runs:
+            for side in (Side.BID, Side.ASK):
+                price = self.book.best(side)
+                if price is not None:
+                    self.last_best[side] = price
         if (self.halted or not self.replay.valid) and self.live_runs:
             reason = "halt" if self.halted else "invalid book"
             for run in list(self.live_runs):
@@ -272,7 +279,8 @@ class Engine:
         """An aggressor traded e.qty at e.price against resting side e.side.
 
         A simulated order at the same price sits in the FIFO queue: the trade first
-        burns the lots ahead of it. A simulated order at a better price would have
+        burns the lots ahead of it. A hidden print leaves the visible queue as it was,
+        so it only reaches an order with nothing ahead. An order at a better price would have
         met the aggressor first, so nothing is ahead of it and it fills. One
         historical trade can pay out at most e.qty lots to a ledger, however many
         of that ledger's orders it touches.
@@ -288,6 +296,9 @@ class Engine:
                 child.queue_ahead = 0
             elif self.cfg.trade_through_only:
                 continue
+            elif e.kind == Kind.TRADE_HIDDEN:
+                if child.queue_ahead > 0:
+                    continue  # A hidden print removes no visible lots, so the queue stays.
             else:
                 burned = min(child.queue_ahead, passing)
                 child.queue_ahead -= burned
@@ -353,6 +364,7 @@ class Engine:
         if bid is None or ask is None:
             run.excluded = "one-sided book at arrival"
             return
+        self.last_best[Side.BID], self.last_best[Side.ASK] = bid, ask
         run.ledger = Ledger(run.parent.side, run.parent.target_lots, bid + ask)
         self.live_runs.append(run)
         run.log(now, "arrival", mid_x2=bid + ask)
@@ -388,8 +400,13 @@ class Engine:
         visible = self.visible_snapshots  # Actions run in time order, so this only moves forward.
         if visible == 0:
             return None
+        if run.arrival_mid_seen is None:
+            first = snapshots[visible - 1]
+            if first.bids and first.asks:
+                run.arrival_mid_seen = (first.bids[0][0] + first.asks[0][0]) / 2
         resting = run.resting
-        rest_live = resting is not None and not resting.cancel_requested and not resting.finished
+        # open_seen, not resting.finished: a fill must stay unknown until its notice arrives.
+        rest_live = resting is not None and not resting.cancel_requested and resting in run.open_seen
         queue_seen = None
         if rest_live:
             trail = resting.queue_trail
@@ -400,7 +417,7 @@ class Engine:
         return View(
             now_ns=now,
             parent=run.parent,
-            arrival_mid_x2=run.ledger.arrival_mid_x2,
+            arrival_mid_seen=run.arrival_mid_seen,
             market=snapshots[visible - 1],
             history=snapshots[max(0, visible - 64) : visible],
             filled_seen=run.filled_seen,
@@ -443,7 +460,7 @@ class Engine:
 
     def _cancel_resting(self, now: int, run: Run) -> None:
         child = run.resting
-        if child is not None and not child.cancel_requested and not child.finished:
+        if child is not None and not child.cancel_requested:
             child.cancel_requested = True
             run.log(now, "cancel_request", child=child.child_id)
             self.at(now + self.cfg.cancel_latency_ns, self.cancel_lands, child)
@@ -588,7 +605,9 @@ class Engine:
                 self._commit_consumption(run, side, price, qty)
                 self._force(now, run, price, qty)
         if ledger.remaining_lots:
-            base = worst if worst is not None else (ledger.arrival_mid_x2 + 1) // 2
+            base = worst if worst is not None else self.last_best[side]
+            if base is None:
+                base = (ledger.arrival_mid_x2 + 1) // 2
             self._force(now, run, base + run.parent.side * self.cfg.unfilled_extra_ticks, ledger.remaining_lots)
         self.live_runs.remove(run)
         run.log(now, "complete", filled=ledger.filled_lots)
@@ -629,6 +648,8 @@ class Engine:
         for side in (Side.BID, Side.ASK):
             for child in self.active[side]:
                 child.queue_trail.append((now, child.queue_ahead))
+                if cfg.record_trace:
+                    child.run.log(now, "queue", queue_ahead=child.queue_ahead, price=child.price)
         if now + cfg.snapshot_interval_ns <= last_ts_ns:
             self.at(now + cfg.snapshot_interval_ns, self.capture, last_ts_ns)
 
@@ -649,8 +670,9 @@ def replay_session(
     if events:
         # Offset the grid so a decision on a whole interval sees a snapshot exactly
         # obs_latency_ns old. Otherwise grid spacing would hide the latency being studied.
-        offset = -config.obs_latency_ns % config.snapshot_interval_ns
-        engine.at(events[0].ts_ns + offset, engine.capture, events[-1].ts_ns)
+        first = events[0].ts_ns
+        offset = (-config.obs_latency_ns - first) % config.snapshot_interval_ns
+        engine.at(first + offset, engine.capture, events[-1].ts_ns)
     replay_apply = engine.replay.apply
     heap = engine.heap
     for event in events:

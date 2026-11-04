@@ -27,6 +27,8 @@ def paired_day_means(rows, strategy_a: str, strategy_b: str) -> tuple[list[int],
 
 def bootstrap_mean_ci(day_values: np.ndarray, level: float = 0.95) -> tuple[float, float, float]:
     """Mean and percentile interval from resampling days with replacement."""
+    if len(day_values) < 2:
+        return float(day_values.mean()), float("nan"), float("nan")  # One day gives no spread.
     rng = np.random.default_rng(BOOTSTRAP_SEED)
     draws = rng.integers(0, len(day_values), size=(BOOTSTRAP_DRAWS, len(day_values)))
     means = day_values[draws].mean(axis=1)

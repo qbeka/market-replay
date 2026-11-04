@@ -45,7 +45,7 @@ class Book:
         """Top levels as (price_ticks, total_lots), best first."""
         keys = self._sorted_keys[side]
         rows = []
-        for key in reversed(keys[-levels:]):
+        for key in reversed(keys[-levels:] if levels > 0 else ()):
             price = key * side
             rows.append((price, sum(self.levels[side][price].values())))
         return rows
@@ -104,6 +104,8 @@ class Book:
         if located is None:
             raise BookError(f"order {e.order_id} is unknown")
         side, price = located
+        if e.side != side:
+            raise BookError(f"order {e.order_id} is on side {side}, not {e.side}")
         old_qty = self.levels[side][price][e.order_id]
         if self.loses_priority(e, price, old_qty):
             self._remove(side, price, e.order_id)

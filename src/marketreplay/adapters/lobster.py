@@ -37,10 +37,9 @@ NS_PER_S = 1_000_000_000
 
 @dataclass(frozen=True)
 class Units:
-    """USD x 10,000 per tick. The default is one US equity tick of $0.01."""
+    """USD x 10,000 per tick. The default is one US equity tick of $0.01. One share is one lot."""
 
     price_per_tick: int = 100
-    shares_per_lot: int = 1
 
 
 @dataclass(frozen=True)
@@ -124,7 +123,7 @@ def convert(messages: list[Message], first_row: list[int], units: Units = Units(
     for side, levels in ((Side.BID, bids), (Side.ASK, asks)):
         for raw_price, raw_size in levels:
             price = _ticks(raw_price, units)
-            lots = raw_size // units.shares_per_lot
+            lots = raw_size
             anonymous[(side, price)] = next_anonymous
             remaining[next_anonymous] = lots
             events.append(Event(0, seed_ts, Kind.ADD, side, next_anonymous, price, lots))
@@ -143,9 +142,9 @@ def convert(messages: list[Message], first_row: list[int], units: Units = Units(
     for row, m in enumerate(messages[1:], start=1):
         if m.event_type == 1:
             live.add(m.order_id)
-            push(row, m.time_ns, Kind.ADD, _side(m.direction), m.order_id, _ticks(m.price, units), m.size // units.shares_per_lot)
+            push(row, m.time_ns, Kind.ADD, _side(m.direction), m.order_id, _ticks(m.price, units), m.size)
         elif m.event_type in (2, 3, 4):
-            side, price, lots = _side(m.direction), _ticks(m.price, units), m.size // units.shares_per_lot
+            side, price, lots = _side(m.direction), _ticks(m.price, units), m.size
             order_id = m.order_id
             if order_id not in live:
                 order_id = anonymous.get((side, price))
@@ -157,7 +156,7 @@ def convert(messages: list[Message], first_row: list[int], units: Units = Units(
             push(row, m.time_ns, kind, side, order_id, price, lots)
         elif m.event_type == 5:
             side = _side(m.direction)
-            push(row, m.time_ns, Kind.TRADE_HIDDEN, side, 0, _hidden_ticks(m.price, side, units), m.size // units.shares_per_lot)
+            push(row, m.time_ns, Kind.TRADE_HIDDEN, side, 0, _hidden_ticks(m.price, side, units), m.size)
         elif m.event_type == 6:
             # An auction cross. Continuous matching does not apply, so bracket it as a halt.
             push(row, m.time_ns, Kind.HALT_START)
@@ -170,7 +169,8 @@ def convert(messages: list[Message], first_row: list[int], units: Units = Units(
         else:
             raise ValueError(f"unknown LOBSTER event type {m.event_type}")
     numbered = [
-        Event(i + 1, e.ts_ns, e.kind, e.side, e.order_id, e.price, e.qty, e.recv_ns) for i, e in enumerate(events)
+        # LOBSTER has no receive time, so the feed delay is unknown and recorded as zero.
+        Event(i + 1, e.ts_ns, e.kind, e.side, e.order_id, e.price, e.qty, e.ts_ns) for i, e in enumerate(events)
     ]
     return Conversion(numbered, dropped, rows)
 
@@ -208,8 +208,8 @@ def compare_to_snapshots(conversion: Conversion, orderbook: list[list[int]], uni
         got_bids = replay.book.depth(Side.BID, levels)
         got_asks = replay.book.depth(Side.ASK, levels)
         for k in range(1, levels + 1):
-            want_bids = [(_ticks(p, units), s // units.shares_per_lot) for p, s in bids[:k]]
-            want_asks = [(_ticks(p, units), s // units.shares_per_lot) for p, s in asks[:k]]
+            want_bids = [(_ticks(p, units), s) for p, s in bids[:k]]
+            want_asks = [(_ticks(p, units), s) for p, s in asks[:k]]
             if got_bids[:k] == want_bids and got_asks[:k] == want_asks:
                 matches[k - 1] += 1
             elif k == 1 and first_mismatch is None:

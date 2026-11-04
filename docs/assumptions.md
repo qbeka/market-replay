@@ -15,6 +15,7 @@ Every result in this project depends on the rules below. Each configurable rule 
 | Queue position at arrival | All visible lots at the price are ahead | `queue_ahead_pct` up to 250% |
 | Cancels ahead of you | Advance you by the exact lots, because the feed shows which orders were ahead | `cancel_ahead_credit_pct` 50 and 0 |
 | Trades at your price | Burn the queue ahead first, and the rest fills you | `trade_through_only` removes these fills |
+| Hidden prints at your price | Leave the visible queue alone, and fill you only with nothing ahead | Always on |
 | Trades through your price | Clear the queue and fill you at your limit | Always on |
 | A recorded add that lands on your price | Fills you at your limit | Always on |
 | Passive fill cost | Maker fee only | `adverse_fill_mticks` adds a cost per lot |
@@ -28,6 +29,7 @@ Other rules:
 - A fill does not reduce the size of the recorded order it replaced. That order stays in the book, which is optimistic for later simulated orders at that price, within one ledger only.
 - One historical trade can pay a ledger at most its own size. Lots a ledger crossed are marked consumed, so it cannot take them twice.
 - Consumed liquidity never returns within a ledger, and ledgers never share it.
+- A recorded MODIFY that reprices onto a simulated order gives no fill, though an ADD at that price would. This is conservative, and the synthetic feed never does it.
 
 ## Clocks
 
@@ -46,7 +48,7 @@ A strategy can only send lots it knows are not already working. It learns of a f
 
 ## Deadline rule
 
-Every order completes. At the deadline, any resting order is removed at once and the rest is bought from the visible book at any price, paying the taker fee plus 2 ticks per lot. If the book runs out, the rest pays the last visible price plus 10 ticks. Leaving an order unfinished therefore always costs money and can never improve a score.
+Every order completes. At the deadline, any resting order is removed at once and the rest is bought from the visible book at any price, paying the taker fee plus 2 ticks per lot. If the book runs out, the rest pays the last visible far-side price plus 10 ticks. Leaving an order unfinished therefore always costs money and can never improve a score.
 
 The instant removal is an assumption. It ignores cancel latency at the deadline.
 

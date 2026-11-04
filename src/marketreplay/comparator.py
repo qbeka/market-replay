@@ -31,7 +31,8 @@ def state_row(view: View) -> np.ndarray | None:
     row = features(view)
     if row is None:
         return None
-    drift = view.parent.side * (mid(view.market) - view.arrival_mid_x2 / 2)
+    start = view.arrival_mid_seen if view.arrival_mid_seen is not None else mid(view.market)
+    drift = view.parent.side * (mid(view.market) - start)
     return np.append(row, drift)
 
 

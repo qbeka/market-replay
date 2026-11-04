@@ -30,7 +30,7 @@ class FixedMove:
 def view(now_s=10.0, filled=0, sent=0):
     market = Snapshot(0, ((100, 10),), ((102, 10),), 5, 5, 0)
     parent = Parent(1, Side.BID, 120, 0, 60_000_000_000)
-    return View(int(now_s * 1e9), parent, 202, market, [market], filled, sent, None, 0, None)
+    return View(int(now_s * 1e9), parent, 101.0, market, [market], filled, sent, None, 0, None)
 
 
 def policy(p, unfilled=0.0, overall=0.0, **params):

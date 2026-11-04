@@ -35,3 +35,15 @@ Failed experiments and the changes they caused, in order. All numbers come from 
 - **Setup:** first validation run of `fitted_q`, at 2.18 bps with 23.6% forced lots.
 - **Cause:** fitted Q-iteration ran 8 iterations with no discounting. Each one carries cost back one decision, and the horizon is 30 decisions, so most states never learned the deadline penalty. The behavior policy also crossed too often to reach deadlines.
 - **Change:** 30 iterations, and a lower range of behavior cross rates. Reporting the first version as "reinforcement learning lost" would have been unfair.
+
+## 6. The independent review found three biases before the freeze
+
+A separate reviewer got the acceptance criteria and a commit hash, then tried to break the engine. Each finding was reproduced as a failing test before its fix, in `tests/test_review_findings.py`. These numbers are the reviewer's, from 30 small non-test days.
+
+- **Hidden prints burned visible queue.** A hidden trade removes no visible lots, but it reduced `queue_ahead`. Passive cost was understated by 0.052 bps and urgency by 0.027 bps, a bias that favored resting. Fixed in both engines.
+- **Own order state leaked ahead of the observation clock.** `rest_price` read the live order, so a strategy could learn of a full fill early. It was harmless at base latency but changed 15 of 40 parents at 904 ms. That would have biased the high-latency stress tests. The causality test now compares every field of the view, which would have caught this.
+- **The arrival midpoint in the view came from the live book.** Only `fitted_q` read it. The ledger keeps the true midpoint, and strategies now get the delayed one.
+
+Off the study path, the review also fixed the deadline price on an empty far side, priority rules missing from the compiled replay, and a snapshot grid that drifted when a feed started off-interval. Lots per share was removed from the LOBSTER adapter, because flooring odd lots to zero broke the book.
+
+What held up: the book against a brute-force FIFO over 183,621 steps, conservation and no double fills over 1,500 fuzz seeds, ledger isolation, shortfall signs, and compiled against Python under ASan and UBSan.
