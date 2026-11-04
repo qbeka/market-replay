@@ -183,7 +183,7 @@ def page_content(final: dict, frozen: dict, stress: dict, profile: dict, fuzz: d
             f"The compiled C replay matches the Python reference byte for byte, with {fuzz['ledger_divergences'] + fuzz['book_divergences']} divergences in {fuzz['cases']:,} hostile fuzz cases under AddressSanitizer and UBSan.",
             "Strategies receive only delayed data. A test rewrites the future and requires every earlier view to stay identical.",
             f"The hypothesis, split and decision rule were committed before any test day was read. The interval resamples whole days, {paired['days']} of them.",
-            "An independent review found three biases before the freeze. Each one became a failing test, then a fix.",
+            "A separate AI review agent found three biases before the freeze. Each one became a failing test, then a fix.",
         ],
         "limits": [
             "Market impact. The feed is fixed, so a simulated order never moves a price and nobody reacts to it.",

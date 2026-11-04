@@ -37,9 +37,9 @@ Failed experiments and the changes they caused, in order. All numbers come from 
 - **Change:** 30 iterations, and a lower range of behavior cross rates. Reporting the first version as "reinforcement learning lost" would have been unfair.
 - **After the fix:** p95 fell from 14.02 to 11.17 bps, but forced lots stayed at 20.9% and the mean stayed at 2.18 bps. It remains worse than the simple rules on validation days. It trained on 27,765 transitions with no tuning of its own, so treat this as one modest comparator, not a verdict on reinforcement learning.
 
-## 6. The independent review found three biases before the freeze
+## 6. A review agent found three biases before the freeze
 
-A separate reviewer got the acceptance criteria and a commit hash, then tried to break the engine. Each finding was reproduced as a failing test before its fix, in `tests/test_review_findings.py`. These numbers are the reviewer's, from 30 small non-test days.
+A separate AI agent, with no access to the author's reasoning, got the acceptance criteria and a commit hash, then tried to break the engine. No human reviewed this code. Each finding was reproduced as a failing test before its fix, in `tests/test_review_findings.py`. These numbers are the reviewer's, from 30 small non-test days.
 
 - **Hidden prints burned visible queue.** A hidden trade removes no visible lots, but it reduced `queue_ahead`. Passive cost was understated by 0.052 bps and urgency by 0.027 bps, a bias that favored resting. Fixed in both engines.
 - **Own order state leaked ahead of the observation clock.** `rest_price` read the live order, so a strategy could learn of a full fill early. It was harmless at base latency but changed 15 of 40 parents at 904 ms. That would have biased the high-latency stress tests. The causality test now compares every field of the view, which would have caught this.

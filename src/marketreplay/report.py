@@ -187,7 +187,7 @@ Always say "simulated". The market is a seeded synthetic feed, so these numbers 
 - Built an event-driven limit order book replay and execution simulator in Python and C, modeling queue position, partial fills, in-flight cancels and three separate latency clocks over {events / 1e6:.1f}M market-by-order events, with the C core sustaining {profile['compiled_book']['events_per_s'] / 1e6:.1f}M events per second on one core ({profile['speedup_book']:.0f}x the reference).
 - Proved the compiled engine exact with sanitized differential fuzzing: {divergences} ledger or book divergences across {fuzz['cases']:,} hostile cases under ASan and UBSan, backed by {evidence['tests']} tests at {evidence['coverage_pct']}% coverage and hand-worked traces.
 - Trained a calibrated gradient-boosted fill model (Brier {fill['brier']:.3f} against {fill['base_rate_brier']:.3f} base rate, {fill['ece']:.3f} calibration error) and embedded it in a constrained execution controller that {outcome}, on {learned['parents']:,} paired simulated orders.
-- Ran a pre-registered evaluation with a committed freeze of hypothesis, split and decision rule, day-level bootstrap intervals over {paired['days']} days and {scenarios} fill-assumption stress scenarios, after an independent adversarial review caught 3 look-ahead and fill biases before the final test.
+- Ran a pre-registered evaluation with a committed freeze of hypothesis, split and decision rule, day-level bootstrap intervals over {paired['days']} days and {scenarios} fill-assumption stress scenarios, after an adversarial code review caught 3 look-ahead and fill biases before the final test.
 
 ## One line version
 
