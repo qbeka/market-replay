@@ -196,7 +196,7 @@ function drawRidge() {
   const horizon = h * 0.62, rise = h * 0.3;
   const path = (lift, scale) => mids.map((m, i) => `${i ? "L" : "M"}${(i / n * w).toFixed(1)} ${(horizon + lift - (m - lo) / (hi - lo || 1) * rise * scale).toFixed(1)}`).join("");
   let out = "";
-  const contours = [[0, 1, .34], [14, .92, .16], [32, .8, .11], [54, .66, .08], [80, .5, .06], [112, .34, .045], [150, .18, .035], [196, .06, .03]];
+  const contours = [[0, 1, .3], [16, .9, .13], [36, .76, .09], [60, .6, .065], [88, .44, .05], [120, .28, .04], [156, .14, .03], [198, .05, .025]];
   contours.forEach(([lift, scale, alpha], i) => {
     out += `<path class="c" d="${path(lift, scale)}" fill="none" stroke="rgba(29,58,42,${alpha})" stroke-width=".75" vector-effect="non-scaling-stroke" style="--d:${i * 120}ms"/>`;
   });
@@ -224,7 +224,7 @@ function drawMarket() {
     const v = Math.round(lo + (hi - lo) * i / ticks);
     out += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text class="axis" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
   }
-  for (let t = 0; t <= s.horizon_s; t += 15) out += `<text class="axis" x="${x(t)}" y="${H - 4}" text-anchor="middle">${t} s</text>`;
+  for (let t = 0; t <= s.horizon_s; t += 15) out += `<text class="axis" x="${x(t)}" y="${H - 4}" text-anchor="${t ? (t === s.horizon_s ? "end" : "middle") : "start"}">${t} s</text>`;
   /* Bid and ask are hairlines. The band between them is the spread a cross must pay. */
   const quote = key => stepped(book.map(r => [r.t, r[key]]), x, y);
   out += `<path d="${quote("ask")}" fill="none" stroke="rgba(29,58,42,.38)" stroke-width=".75"/>`;

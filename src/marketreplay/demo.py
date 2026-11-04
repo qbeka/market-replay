@@ -2,8 +2,9 @@
 
 Scenes are chosen by rule from the raw test results, so they cannot be cherry-picked:
 
-    typical     the parent whose paired difference is closest to the median
-    worst loss  the parent where the learned policy lost the most to the baseline
+    typical     the median parent among those where the two strategies differed
+    biggest win the parent where the learned policy gained the most on the baseline
+    worst loss  the parent where it lost the most
 
 Every number on the page comes from the replay of that parent.
 """
@@ -33,13 +34,20 @@ def choose_scenes(rows, baseline: str) -> list[dict]:
     differences = [
         (pair["learned"] - pair[baseline], key) for key, pair in pairs.items() if len(pair) == 2
     ]
-    values = np.array([d for d, _ in differences])
-    median = float(np.median(values))
-    typical = min(differences, key=lambda item: (abs(item[0] - median), item[1]))
-    worst = max(differences, key=lambda item: (item[0], item[1]))
+    disagreed = [item for item in differences if abs(item[0]) >= 0.01]
+    median = float(np.median([d for d, _ in disagreed]))
+    typical = min(disagreed, key=lambda item: (abs(item[0] - median), item[1]))
+    best = min(disagreed, key=lambda item: (item[0], item[1]))
+    worst = max(disagreed, key=lambda item: (item[0], item[1]))
+    share = 100 * len(disagreed) / len(differences)
     return [
-        {"title": "A typical order", "rule": "The parent closest to the median paired difference", "key": typical[1]},
-        {"title": "The worst loss", "rule": "The parent where the learned policy lost the most", "key": worst[1]},
+        {
+            "title": "A typical order",
+            "rule": f"The traders acted differently on {share:.0f}% of orders. This is the median of those orders.",
+            "key": typical[1],
+        },
+        {"title": "The biggest win", "rule": "The order where the learned policy gained the most.", "key": best[1]},
+        {"title": "The worst loss", "rule": "The order where the learned policy lost the most.", "key": worst[1]},
     ]
 
 
@@ -120,11 +128,12 @@ def scene_data(study: Study, fitted, scene: dict, baseline: str) -> dict:
     }
 
 
-def session_ridge(snapshots: list, points: int = 240) -> list[float]:
-    """One session's midpoint, thinned for the hairline behind the page."""
-    mids = [m for m in (mid(s) for s in snapshots) if m is not None]
-    step = max(1, len(mids) // points)
-    return mids[::step]
+def session_ridge(snapshots: list, points: int = 120) -> list[float]:
+    """One session's midpoint, smoothed and thinned into a calm line behind the page."""
+    mids = np.array([m for m in (mid(s) for s in snapshots) if m is not None])
+    width = max(1, len(mids) // 40)
+    smooth = np.convolve(mids, np.ones(width) / width, mode="valid")
+    return [round(float(v), 2) for v in smooth[:: max(1, len(smooth) // points)]]
 
 
 def compact(value: float) -> str:
