@@ -46,8 +46,8 @@ def choose_scenes(rows, baseline: str) -> list[dict]:
             "rule": f"The traders acted differently on {share:.0f}% of orders. This is the median of those orders.",
             "key": typical[1],
         },
-        {"title": "The biggest win", "rule": "The order where the learned policy gained the most.", "key": best[1]},
-        {"title": "The worst loss", "rule": "The order where the learned policy lost the most.", "key": worst[1]},
+        {"title": "The biggest win", "rule": "The order where the learned policy finished furthest ahead of the other trader.", "key": best[1]},
+        {"title": "The worst loss", "rule": "The order where the learned policy finished furthest behind the other trader.", "key": worst[1]},
     ]
 
 
@@ -188,6 +188,7 @@ def page_content(final: dict, frozen: dict, stress: dict, profile: dict, fuzz: d
         "limits": [
             "Market impact. The feed is fixed, so a simulated order never moves a price and nobody reacts to it.",
             "A real venue. The feed is a seeded synthetic market, and its signal strength was set by this project.",
+            "Thin markets. Sparse synthetic days can show spreads of 50 ticks, far wider than normal, so their largest gains and losses are not realistic.",
             "Queue reality. Fills come from a queue model, so the stress tests show how much the answer depends on it.",
         ],
     }

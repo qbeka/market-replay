@@ -8,6 +8,8 @@ Every result in this project depends on the rules below. Each configurable rule 
 - **It does not show a real market.** The study feed comes from `synthetic.py`. A model trained on it learns the generator's rules. A gain here shows the method can use structure that exists. It does not show that the structure exists on any venue.
 - **The market is partly the author's design.** The generator has hidden drift that order flow leaks, and this project set how strong it is. A policy doing well on it partly reflects that choice.
 
+- **Sparse days are extreme.** Some sparse synthetic days show spreads near 50 ticks. A resting order there can earn gains no real book would offer, so tail numbers on those days are not realistic. This was seen after the freeze, so the feed was left unchanged. Session tables in the report keep sparse days apart.
+
 ## Matching rules
 
 | Rule | Default | Stress |
