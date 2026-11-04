@@ -254,7 +254,7 @@ Recorded orders are smaller than probes, so their rate should run higher. With {
 
 ## Speed and memory
 
-Measured on {manifest['hardware']['cpu']}, one core, day {profile['day']} with {profile['events']:,} events, median of {profile['python_book']['runs']} runs. The compiled replay was profiled only after its ledgers matched the reference exactly.
+Measured on {manifest['hardware']['cpu']}, one core, day {profile['day']} with {profile['events']:,} events, median of {profile['python_book']['runs']} runs. The 1 minute load average was {profile['load_average_1m_before']:.1f} before the run and {profile['load_average_1m_after']:.1f} after it. The compiled replay was profiled only after its ledgers matched the reference exactly.
 
 | Path | Events per second | Seconds, median | Range |
 |---|---:|---:|---|

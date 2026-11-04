@@ -6,6 +6,7 @@ process. The Python number includes the interpreter and numpy.
 """
 
 import json
+import os
 import re
 import statistics
 import subprocess
@@ -65,6 +66,7 @@ def _spread(values: list[float]) -> dict:
 
 
 def profile(study: Study) -> dict:
+    load_before = os.getloadavg()[0]  # Timings mean little on a busy machine, so record this.
     fitted = load_fitted()
     day = PROFILE_DAY
     day_path = plan_folder(study.plan) / f"day_{day:03d}.bin"
@@ -113,6 +115,8 @@ def profile(study: Study) -> dict:
     python_exec_s = _spread(python_exec)
     compiled_exec_s = _spread(compiled_exec)
     payload = {
+        "load_average_1m_after": os.getloadavg()[0],
+        "load_average_1m_before": load_before,
         "day": day,
         "events": count,
         "strategies_in_exec_run": len(names),
