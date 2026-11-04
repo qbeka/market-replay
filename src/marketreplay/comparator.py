@@ -22,7 +22,9 @@ from .ledger import MTICKS_PER_TICK, Role
 from .study import Study, WORKERS, load_day, parents_for_day
 
 ACTIONS = (Action.WAIT, Action.REST, Action.CROSS)
-Q_ITERATIONS = 8
+# With no discounting, each iteration carries cost back one decision. The horizon is 30
+# decisions, so fewer iterations would leave early states blind to the deadline penalty.
+Q_ITERATIONS = 30
 
 
 def state_row(view: View) -> np.ndarray | None:
@@ -49,7 +51,7 @@ class Explorer:
     def __init__(self, seed: int, clip_lots: int):
         self.rng = random.Random(seed)
         self.clip_lots = clip_lots
-        self.cross_rate = self.rng.uniform(0.0, 0.7)
+        self.cross_rate = self.rng.uniform(0.0, 0.35)  # Low rates reach the deadline, which it must learn.
         self.steps = []  # (now_ns, state, action index)
 
     def decide(self, view: View) -> Intent | None:
