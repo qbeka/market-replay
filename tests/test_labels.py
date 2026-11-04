@@ -20,16 +20,33 @@ def test_kaplan_meier_with_no_censoring_is_the_plain_rate():
     assert kaplan_meier([(1, True), (3, True), (9, False), (9, False)], 5) == pytest.approx(0.5)
 
 
+def opening():
+    return [
+        Event(1, 0, Kind.CLEAR),
+        Event(2, 0, Kind.ADD, Side.BID, 1, 100, 5),
+        Event(3, 0, Kind.ADD, Side.ASK, 2, 102, 5),
+        Event(4, 0, Kind.SNAPSHOT_END),
+    ]
+
+
 def test_observed_outcomes_counts_each_fate():
-    events = [
-        Event(1, 0, Kind.ADD, Side.BID, 1, 100, 5),  # Not joining: no prior best on this side.
-        Event(2, 0, Kind.ADD, Side.ASK, 2, 102, 5),
-        Event(3, 1 * S, Kind.ADD, Side.BID, 3, 100, 2),  # Joins. Executes at 3 s.
-        Event(4, 2 * S, Kind.ADD, Side.BID, 4, 100, 2),  # Joins. Cancels at 4 s.
-        Event(5, 3 * S, Kind.ADD, Side.BID, 5, 100, 2),  # Joins. Still there at the end.
-        Event(6, 3 * S, Kind.EXECUTE, Side.BID, 3, 100, 2),
-        Event(7, 4 * S, Kind.CANCEL, Side.BID, 4, 100, 2),
-        Event(8, 60 * S, Kind.ADD, Side.BID, 6, 99, 1),
+    events = opening() + [
+        Event(5, 1 * S, Kind.ADD, Side.BID, 3, 100, 2),  # Joins. Executes at 3 s.
+        Event(6, 2 * S, Kind.ADD, Side.BID, 4, 100, 2),  # Joins. Cancels at 4 s.
+        Event(7, 3 * S, Kind.ADD, Side.BID, 5, 100, 2),  # Joins. Still there at the end.
+        Event(8, 3 * S, Kind.EXECUTE, Side.BID, 3, 100, 2),
+        Event(9, 4 * S, Kind.CANCEL, Side.BID, 4, 100, 2),
+        Event(10, 60 * S, Kind.ADD, Side.BID, 6, 99, 1),
     ]
     outcome = observed_outcomes(events, horizon_s=15)
     assert (outcome.orders, outcome.fully_executed, outcome.cancelled_first, outcome.still_resting) == (3, 1, 1, 1)
+
+
+def test_a_gap_censors_tracked_orders_instead_of_crashing():
+    events = opening() + [
+        Event(5, 1 * S, Kind.ADD, Side.BID, 3, 100, 2),
+        Event(9, 2 * S, Kind.EXECUTE, Side.BID, 77, 100, 1),  # Gap, and an id the book never saw.
+        Event(10, 3 * S, Kind.ADD, Side.BID, 8, 100, 1),
+    ]
+    outcome = observed_outcomes(events, horizon_s=15)
+    assert (outcome.orders, outcome.fully_executed, outcome.cancelled_first) == (1, 0, 1)

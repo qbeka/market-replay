@@ -16,6 +16,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from .book import ReplayedBook
 from .events import Event, Kind, Side
 from .execution import ExecConfig, Intent, Parent, Snapshot, View, replay_session
 from .features import FEATURE_NAMES, features, mid
@@ -115,23 +116,26 @@ class ObservedOutcomes:
 
 def observed_outcomes(events: list[Event], horizon_s: int = LABEL_HORIZON_S) -> ObservedOutcomes:
     """Follow every recorded add that joined the best price on its side."""
-    from .book import Book
-
-    book = Book()
+    replay = ReplayedBook()
+    book = replay.book
     horizon_ns = horizon_s * NS_PER_S
     joined: dict[int, tuple[int, int]] = {}  # order_id -> (join ts, qty)
     durations: list[tuple[int, bool]] = []
     last_ts = events[-1].ts_ns if events else 0
+
+    def censor_all(ts_ns: int) -> None:
+        for join_ts, _ in joined.values():
+            durations.append((min(ts_ns - join_ts, horizon_ns), False))
+        joined.clear()
+
     for e in events:
-        if e.kind == Kind.CLEAR:
-            for order_id, (join_ts, _) in joined.items():
-                durations.append((min(e.ts_ns - join_ts, horizon_ns), False))
-            joined.clear()
+        if not replay.valid or e.kind == Kind.CLEAR:
+            censor_all(e.ts_ns)  # Across a gap or a reset, an order's fate is unknown.
         elif e.kind == Kind.ADD and book.best(e.side) is not None and e.price == book.best(e.side):
             joined[e.order_id] = (e.ts_ns, e.qty)
         elif e.kind in (Kind.EXECUTE, Kind.CANCEL) and e.order_id in joined:
             join_ts, _ = joined[e.order_id]
-            gone = book.order_qty(e.order_id) == e.qty
+            gone = book.order_index.get(e.order_id) is not None and book.order_qty(e.order_id) == e.qty
             age = e.ts_ns - join_ts
             if age >= horizon_ns:
                 del joined[e.order_id]
@@ -142,7 +146,7 @@ def observed_outcomes(events: list[Event], horizon_s: int = LABEL_HORIZON_S) -> 
         elif e.kind == Kind.MODIFY and e.order_id in joined:
             join_ts, _ = joined.pop(e.order_id)
             durations.append((min(e.ts_ns - join_ts, horizon_ns), False))  # Terms changed: censored.
-        book.apply(e)
+        replay.apply(e)
     for order_id, (join_ts, _) in joined.items():
         durations.append((min(last_ts - join_ts, horizon_ns), False))
     executed = sum(1 for _, hit in durations if hit)
