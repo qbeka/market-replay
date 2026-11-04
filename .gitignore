@@ -13,3 +13,7 @@ compiled/build/
 
 # Licensed market data stays out of Git. See docs/data_rights.md.
 data/licensed/
+
+# Local tooling and design previews
+.claude/
+site/preview/
