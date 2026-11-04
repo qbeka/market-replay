@@ -16,7 +16,8 @@ def test_kaplan_meier_handles_censoring_by_hand():
 
 
 def test_kaplan_meier_with_no_censoring_is_the_plain_rate():
-    assert kaplan_meier([(1, True), (2, False), (9, False), (3, True)], 5) == pytest.approx(0.5)
+    # Nothing is censored before the horizon, so this is simply 2 of 4.
+    assert kaplan_meier([(1, True), (3, True), (9, False), (9, False)], 5) == pytest.approx(0.5)
 
 
 def test_observed_outcomes_counts_each_fate():
