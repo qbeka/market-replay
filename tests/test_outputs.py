@@ -1,5 +1,7 @@
 """Reports and the page must word results by the evidence, never by hope."""
 
+import pytest
+
 from marketreplay.demo import choose_scenes, compact, verdict_sentence
 from marketreplay.evaluate import Row, read_rows, write_rows
 from marketreplay.report import comparison_table, ordered_scenarios, reversals, strategy_table
@@ -34,7 +36,7 @@ def test_reversals_keep_a_flip_apart_from_a_lost_interval():
     text = reversals(STRESS)
     assert "interval above zero, in 1 of 3 moved scenarios: flipped." in text
     assert "reaches zero in 1 more, so the evidence for a difference is lost there: lost." in text
-    assert "It loses that place in 1 scenarios: flipped." in text
+    assert "It loses that place in 1 scenario: flipped." in text
 
 
 def summary(mean):
@@ -100,3 +102,17 @@ def test_trace_lines_show_seconds_since_the_parent_began():
 def test_the_smoke_run_passes(capsys):
     run_smoke()
     assert "smoke passed" in capsys.readouterr().out
+
+
+def test_the_manifest_names_any_file_that_changed(tmp_path, monkeypatch):
+    from marketreplay import artifacts
+
+    (tmp_path / "a.json").write_text("one")
+    monkeypatch.setattr(artifacts, "REPO", tmp_path)
+    monkeypatch.setattr(artifacts, "ARTIFACTS", {"a.json": "mreplay a"})
+    monkeypatch.setattr(artifacts, "MANIFEST", tmp_path / "manifest.json")
+    assert "1 files" in artifacts.write_manifest()
+    assert "match" in artifacts.check_manifest()
+    (tmp_path / "a.json").write_text("two")
+    with pytest.raises(SystemExit, match="a.json"):
+        artifacts.check_manifest()

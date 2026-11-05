@@ -24,9 +24,11 @@ def main() -> None:
         ("report", "write docs/report.md and the plots from saved results"),
         ("demo", "write the offline website demo from a recorded run"),
         ("evidence", "run the test suite and record its count and coverage"),
-        ("benchmark", "run final, stress, profile, fuzz, evidence, report and demo in order"),
+        ("benchmark", "run final, stress, profile, fuzz, evidence, report, demo and manifest in order"),
     ]:
         commands.add_parser(name, help=text)
+    manifest = commands.add_parser("manifest", help="write or check the hash of every saved result")
+    manifest.add_argument("--check", action="store_true", help="compare files to results/manifest.json")
     fuzz = commands.add_parser("fuzz", help="differential fuzz of C against Python under sanitizers")
     fuzz.add_argument("--cases", type=int, default=100_000)
     trace = commands.add_parser("trace", help="print one parent's full event trace")
@@ -88,7 +90,12 @@ def main() -> None:
         from .evidence import record_evidence
 
         print(json.dumps(record_evidence(), indent=2))
+    elif args.command == "manifest":
+        from .artifacts import check_manifest, write_manifest
+
+        print(check_manifest() if args.check else write_manifest())
     elif args.command == "benchmark":
+        from .artifacts import write_manifest
         from .demo import write_demo
         from .evidence import record_evidence
         from .fuzz import run_fuzz
@@ -103,3 +110,4 @@ def main() -> None:
         record_evidence()
         print(write_report(study))
         print(write_demo(study))
+        print(write_manifest())
