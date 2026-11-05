@@ -51,7 +51,7 @@ What held up: the book against a brute-force FIFO over 183,621 steps, conservati
 
 ## 7. A thread setting that did nothing cost 36 times the runtime
 
-- **Setup:** the final test took over 8 hours of machine time on a day-parallel run that should have taken minutes.
+- **Setup:** the final test used 19 CPU hours on a day-parallel run that should have taken minutes.
 - **Result:** one test day took 113 s of wall time and 841 s of CPU. With `OMP_NUM_THREADS=1` it took 3.1 s, 36 times faster.
 - **Cause:** each worker process carried 19 threads. Every model call opened an OpenMP region for a single row, and the idle threads spun. `threadpool_limits(1)` looked like it handled this, but it did not stop them. CPU per worker read as 1.2 cores, so `top` showed nothing alarming.
 - **Change:** the package sets `OMP_NUM_THREADS=1` before scikit-learn loads, and the `threadpool_limits` call is gone.
