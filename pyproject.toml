@@ -29,3 +29,5 @@ packages = ["src/marketreplay"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+# Accelerate raises false flags in matrix products on this chip. See docs/assumptions.md.
+filterwarnings = ["ignore:.*encountered in matmul:RuntimeWarning"]

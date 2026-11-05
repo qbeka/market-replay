@@ -17,3 +17,6 @@ data/licensed/
 # Local tooling and design previews
 .claude/
 site/preview/
+
+# Test coverage data
+.coverage*
