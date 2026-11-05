@@ -48,3 +48,12 @@ A separate AI agent, with no access to the author's reasoning, got the acceptanc
 Off the study path, the review also fixed the deadline price on an empty far side, priority rules missing from the compiled replay, and a snapshot grid that drifted when a feed started off-interval. Lots per share was removed from the LOBSTER adapter, because flooring odd lots to zero broke the book.
 
 What held up: the book against a brute-force FIFO over 183,621 steps, conservation and no double fills over 1,500 fuzz seeds, ledger isolation, shortfall signs, and compiled against Python under ASan and UBSan.
+
+## 7. A thread setting that did nothing cost 36 times the runtime
+
+- **Setup:** the final test took over 8 hours of machine time on a day-parallel run that should have taken minutes.
+- **Result:** one test day took 113 s of wall time and 841 s of CPU. With `OMP_NUM_THREADS=1` it took 3.1 s, 36 times faster.
+- **Cause:** each worker process carried 19 threads. Every model call opened an OpenMP region for a single row, and the idle threads spun. `threadpool_limits(1)` looked like it handled this, but it did not stop them. CPU per worker read as 1.2 cores, so `top` showed nothing alarming.
+- **Change:** the package sets `OMP_NUM_THREADS=1` before scikit-learn loads, and the `threadpool_limits` call is gone.
+- **Check:** the stress run's base scenario, run after the change, matched the final test on all 5,508 shared rows, so the fix changed speed and nothing else.
+- **Lesson:** the worker count looked parallel and the CPU looked busy. Only timing a single day alone showed the waste.
