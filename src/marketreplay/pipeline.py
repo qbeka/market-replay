@@ -74,7 +74,7 @@ def manifest(study: Study, command: str, seconds: float, extra: dict) -> dict:
     return {
         "command": command,
         "commit": _git("rev-parse", "HEAD"),
-        "code_clean": _git("status", "--porcelain", "--", ".", ":!results", ":!docs/report.md", ":!docs/resume.md", ":!site/index.html") == "",
+        "code_clean": _git("status", "--porcelain", "--", ".", ":!results", ":!docs/report.md", ":!site/index.html") == "",
         "seeds": {"plan": study.plan.seed, "pipeline": SEED},
         "input_sha256": ensure_data(study.plan)["sha256"],
         "study": json.loads(json.dumps(asdict(study), default=str)),

@@ -188,12 +188,6 @@
    "made_by": "mreplay report"
   },
   {
-   "path": "docs/resume.md",
-   "bytes": 2586,
-   "sha256": "d86c3b9a13f4feafc69dc30b82a904d3e69fed84a1e119de614682f5d6d17ab3",
-   "made_by": "mreplay report"
-  },
-  {
    "path": "docs/figures/calibration.svg",
    "bytes": 24507,
    "sha256": "b6629647091fbd7c6d7c262845ec716c5ba1e7ce8c73e72e1607404f3f4acf7c",

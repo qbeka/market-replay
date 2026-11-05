@@ -90,7 +90,7 @@ The stages run in this order. Each one saves to `results/` or `docs/`.
 | `mreplay profile` | Measures speed and memory | 2 min |
 | `mreplay fuzz` | Runs 100,000 cases of C against Python under sanitizers | 23 min |
 | `mreplay evidence` | Records the test count and coverage | 1 min |
-| `mreplay report` | Writes `docs/report.md`, `docs/resume.md` and the plots | 5 s |
+| `mreplay report` | Writes `docs/report.md` and the plots | 5 s |
 | `mreplay demo` | Writes `site/index.html` from a recorded run | 10 s |
 | `mreplay manifest` | Hashes every saved result | 1 s |
 
@@ -132,8 +132,6 @@ seeded feed -> order book -> three clocks -> strategies -> isolated ledgers -> c
 | [`docs/report.md`](docs/report.md) | Every result, generated from saved files |
 | [`docs/assumptions.md`](docs/assumptions.md) | Every matching rule and how it is stressed |
 | [`docs/experiments.md`](docs/experiments.md) | What failed and what changed because of it |
-| [`docs/walkthrough.md`](docs/walkthrough.md) | The project in five minutes, out loud |
-| [`docs/resume.md`](docs/resume.md) | Resume lines tied to the exact run |
 | [`docs/research_note.md`](docs/research_note.md) | Sources, and where this project differs from them |
 | [`docs/environment.md`](docs/environment.md) | The machine and versions used |
 | [`CHECKPOINT.md`](CHECKPOINT.md) | What passed, what failed and the next command |

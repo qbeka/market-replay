@@ -18,7 +18,7 @@ The plan was to reconstruct a real window from LOBSTER's free sample files. That
 - Access means accepting LOBSTER's [Trial and Sample Data Terms](https://lobsterdata.com/terms/trial-and-sample-data), version 2026-08-14. Accepting them is a binding agreement in your name, so this project did not do it.
 - Clause 5.1(b) forbids publicly sharing "results, tables, figures, statistics, screenshots, or findings" derived from the data, without a full licence.
 
-Even with a sample, anything derived from it could not appear on your website or resume. Read the terms yourself before relying on this summary. It is not legal advice.
+Even with a sample, anything derived from it could not be published. Read the terms yourself before relying on this summary. It is not legal advice.
 
 ## If you want real data later
 
