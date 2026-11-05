@@ -1,0 +1,209 @@
+{
+ "simulated": true,
+ "artifacts": [
+  {
+   "path": "results/fit.json",
+   "bytes": 5668,
+   "sha256": "b299d73b9c9c8dfa8e71d848eaf834f4149cfd86354d983729958ab29f54beae",
+   "made_by": "mreplay fit"
+  },
+  {
+   "path": "results/fitted/fitted.pkl",
+   "bytes": 1601035,
+   "sha256": "47a61d768ac869a3f69bf87303e010dfaa776b64e09160f6dcf9616502c33ede",
+   "made_by": "mreplay fit"
+  },
+  {
+   "path": "results/tune.json",
+   "bytes": 16942,
+   "sha256": "372fae967d8a260905683b1816e21db57aa14a29d0d991540cfb05286d7167cb",
+   "made_by": "mreplay tune"
+  },
+  {
+   "path": "results/raw/validation.csv",
+   "bytes": 1967629,
+   "sha256": "6bfafb7b55ceb4f78b61da890d05b3c611d4cb60fff65b6b46d466cfe1bec6ae",
+   "made_by": "mreplay tune"
+  },
+  {
+   "path": "results/freeze.json",
+   "bytes": 3461,
+   "sha256": "4c87d312e1c09b680cda296cd95e8e2815abaea01000af5fda2b63aed246a74f",
+   "made_by": "mreplay freeze"
+  },
+  {
+   "path": "results/final.json",
+   "bytes": 21437,
+   "sha256": "ae5c9916765e58b833ba272f979da9e89b96797605c9fc1b33f748d1c3eac292",
+   "made_by": "mreplay final"
+  },
+  {
+   "path": "results/raw/test.csv",
+   "bytes": 611506,
+   "sha256": "463eebd712c819a897c56b3eab0b8dcd7fe0f55cb31a7c4928f8ea2435f69f0f",
+   "made_by": "mreplay final"
+  },
+  {
+   "path": "results/stress.json",
+   "bytes": 70331,
+   "sha256": "e2abbf5bb8fd96383b8a8c9c6ebbaff88538b52a7053d7b86f131bae6521f64b",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/adverse_fill_1000.csv",
+   "bytes": 412544,
+   "sha256": "0a21b5e6bc83aaccdea89e34e33f9dc3c466fa838669498a922d43e6a1700f1c",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/adverse_fill_300.csv",
+   "bytes": 410672,
+   "sha256": "eb61a1037284184162d0858b0f5f51e58c0d4d1cb576d8f869e1e55f8706689e",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/base.csv",
+   "bytes": 403942,
+   "sha256": "e7daccb349947343063e66451be0d5f5f58457e606a64f4d698413d33439dc20",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/cancel_credit_0pct.csv",
+   "bytes": 404866,
+   "sha256": "f3e740d6d89a8e5b932570a2ef131832a7ae2ee9b50bd9b8a990290c141074b3",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/cancel_credit_50pct.csv",
+   "bytes": 404548,
+   "sha256": "7aa8107c36ad1b700b9ed4cd38a067546ad3ba311b28174624a7a5ebae9b662c",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/latency_plus_250ms.csv",
+   "bytes": 404310,
+   "sha256": "42e01f2e8fb878bfe2dab94c976f862e76be2713d25e39ec428321882ac3a683",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/latency_plus_50ms.csv",
+   "bytes": 403930,
+   "sha256": "128db50e55eafd7946b8f128b6eb1d1cbcb8677a55f06eee01d9b29bbd05753d",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/latency_plus_900ms.csv",
+   "bytes": 404245,
+   "sha256": "9c23406de2836a245778961404ef7a7f46d4461f4eb5b0b365b0832592e180d4",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/maker_fee_charged.csv",
+   "bytes": 403867,
+   "sha256": "2e20a3b19dbfd0a85349a08a9c73159ee9f1fc1ff8aad19c81217c1c0797bd8e",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/maker_rebate_none.csv",
+   "bytes": 399141,
+   "sha256": "ee8c6f469f5a2031bf757864692a1213c5daf137b39a3592621e99ada7741ef7",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/participation_10pct.csv",
+   "bytes": 417662,
+   "sha256": "1b4217c4bf9ac44282bc7a47ced74eaf08a6f02cfff54fe0b7829e4a0bbf2dc1",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/participation_60pct.csv",
+   "bytes": 403621,
+   "sha256": "d153742de5c60578b5df8c78dad9e899fb9d5cec432f8fce54cb134e2324c5e4",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/pessimistic_fills.csv",
+   "bytes": 409076,
+   "sha256": "29fb7c4200fa4e0bc20e2f0eb790f297444fcdbc3f1440a240a83592f38a3730",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/queue_ahead_150pct.csv",
+   "bytes": 404851,
+   "sha256": "b5344d91baa98eaf13cd653a9536d73e54b55440a535232eb1fb25e489a66fd3",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/queue_ahead_250pct.csv",
+   "bytes": 405362,
+   "sha256": "1c33dd02b94de41819fc89ae75b75e1291bc16f5aaaddb1396f9a146e741df3e",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/taker_fee_double.csv",
+   "bytes": 404041,
+   "sha256": "03cc3520ff72f18f8a08ff9f8a8c7522fd87d01d5871f47d28424eed59266592",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/taker_fee_zero.csv",
+   "bytes": 398253,
+   "sha256": "e0dcf2086f01d1e93c881accab26e22259ae139c8aa803e68525b51c8ab42e4a",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/trade_through_only.csv",
+   "bytes": 405114,
+   "sha256": "c05076133aa788c13e29e0c40077e9eff6f196381b1520fda55d3c04113e405a",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/raw/stress/worst_case_fills.csv",
+   "bytes": 408130,
+   "sha256": "e77c8d617bc2bad9cd0287409dfa4eeef6b77dd38d06e557c9d571f12d3a2e9c",
+   "made_by": "mreplay stress"
+  },
+  {
+   "path": "results/profile.json",
+   "bytes": 1091,
+   "sha256": "e1d196b5d3f99da4b215b94e73dc0953854476e11b8db508a66fd6c28e595d32",
+   "made_by": "mreplay profile"
+  },
+  {
+   "path": "results/fuzz.json",
+   "bytes": 243,
+   "sha256": "698d6fa3a5a399497c9177c2b73d6cc33ca083f31a388889d7a2ab124f358bbe",
+   "made_by": "mreplay fuzz"
+  },
+  {
+   "path": "results/evidence.json",
+   "bytes": 70,
+   "sha256": "43713e1a71bd8c88d6fe0ae5ddc9051b45033707f62101c35cc01186d0a4a877",
+   "made_by": "mreplay evidence"
+  },
+  {
+   "path": "docs/report.md",
+   "bytes": 9391,
+   "sha256": "01762fe6e1dd382c3171813a488691350b4de04465d328ee0fc349692413e390",
+   "made_by": "mreplay report"
+  },
+  {
+   "path": "docs/resume.md",
+   "bytes": 2586,
+   "sha256": "d86c3b9a13f4feafc69dc30b82a904d3e69fed84a1e119de614682f5d6d17ab3",
+   "made_by": "mreplay report"
+  },
+  {
+   "path": "site/index.html",
+   "bytes": 221820,
+   "sha256": "5a92803a58854d26268833bd4be686070b747076ce8d2d6e96ac8cdc67e42620",
+   "made_by": "mreplay demo"
+  },
+  {
+   "path": "results/demo_run.json",
+   "bytes": 298088,
+   "sha256": "4e0998ce550988f7a0c93f9ea8748de6b0acaba8746616192e65a718193986a1",
+   "made_by": "mreplay demo"
+  }
+ ]
+}
