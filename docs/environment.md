@@ -16,7 +16,7 @@ Every result in `results/` was produced here. `results/final.json` also records 
 
 ## What shared the machine
 
-Other projects ran on this Mac during the study. That affects time, not results, because every stage is seeded and single-threaded per worker. `results/profile.json` records the load average around each speed measurement.
+Other projects ran on this Mac during the study, with a load average near 40 during profiling. That affects time, not results, because every stage is seeded and single-threaded per worker. `results/profile.json` records the load around each measurement.
 
 `elapsed_s` in `results/final.json` is 37,835 s. That covers a run with the thread problem in [experiments.md](experiments.md), entry 7, and two periods when it was paused for other work. Do not read it as the cost of the final test. After the fix, 19 stress scenarios on the same 34 days took 641 s.
 
