@@ -1,0 +1,47 @@
+{
+  "compiled_book": {
+    "events_per_s": 9514036.461245947,
+    "max": 0.012117,
+    "median": 0.011033,
+    "min": 0.008941,
+    "runs": 15
+  },
+  "compiled_exec": {
+    "events_per_s": 9775339.002528155,
+    "max": 0.012324,
+    "median": 0.01067,
+    "min": 0.008702,
+    "runs": 15
+  },
+  "day": 100,
+  "events": 85065,
+  "load_average_1m_after": 43.2216796875,
+  "load_average_1m_before": 38.2412109375,
+  "parents_in_exec_run": 27,
+  "peak_rss_mb": {
+    "compiled_book": 21.40625,
+    "python_book": 184.3125
+  },
+  "policy_decision_us": {
+    "count": 810,
+    "p50": 2521.2500186171383,
+    "p95": 3428.333002375439
+  },
+  "python_book": {
+    "events_per_s": 1212819.694247935,
+    "max": 0.3632819170015864,
+    "median": 0.15893183401203714,
+    "min": 0.07013820801512338,
+    "runs": 15
+  },
+  "python_exec": {
+    "events_per_s": 345114.67147860007,
+    "max": 0.3693728749931324,
+    "median": 0.3015065419895109,
+    "min": 0.24648329100455157,
+    "runs": 15
+  },
+  "speedup_book": 7.844559670632299,
+  "speedup_exec": 28.324901287583497,
+  "strategies_in_exec_run": 4
+}
