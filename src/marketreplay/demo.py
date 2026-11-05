@@ -9,6 +9,7 @@ Scenes are chosen by rule from the raw test results, so they cannot be cherry-pi
 Every number on the page comes from the replay of that parent.
 """
 
+import base64
 import json
 from dataclasses import replace
 
@@ -24,6 +25,7 @@ from .study import REPO, Study, ensure_data, load_day, parents_for_day
 
 TEMPLATE = REPO / "site" / "template.html"
 OUTPUT = REPO / "site" / "index.html"
+FONT = REPO / "site" / "fonts" / "GeistSerif-Regular.woff2"
 
 
 def choose_scenes(rows, baseline: str) -> list[dict]:
@@ -137,10 +139,10 @@ def session_ridge(snapshots: list, points: int = 120) -> list[float]:
 
 
 def compact(value: float) -> str:
-    """11648571 -> 11.6M. Tile numbers stay short and keep one decimal."""
+    """11648571 -> 11.6M. Tile numbers stay short, with one decimal at most."""
     for size, suffix in ((1e6, "M"), (1e3, "K")):
         if abs(value) >= size:
-            return f"{value / size:.1f}{suffix}"
+            return f"{value / size:.1f}".removesuffix(".0") + suffix
     return f"{value:.0f}"
 
 
@@ -149,7 +151,8 @@ def verdict_sentence(verdict: dict, baseline: str) -> str:
     name = baseline.replace("_", " ")
     span = f"{paired['mean_diff_bps']:+.3f} bps (95% interval {paired['ci_low']:.3f} to {paired['ci_high']:.3f}), resampling {paired['days']} days"
     if verdict["improved"]:
-        return f"The learned policy passed the rule frozen before the test. Against the {name} rule it averaged {span}, with no worse tail and no more forced completion."
+        saved = f"{-paired['mean_diff_bps']:.3f} bps per order (95% interval {-paired['ci_high']:.3f} to {-paired['ci_low']:.3f}), resampling {paired['days']} days"
+        return f"The learned policy passed the rule frozen before the test. It saved {saved} against the {name} rule, with a smaller tail and far less forced completion."
     failed = ", ".join(key.replace("_", " ") for key, ok in verdict["checks"].items() if not ok)
     return f"The learned policy did not pass the rule frozen before the test. Against the {name} rule it averaged {span}. Failed: {failed}. A negative result is a valid finding."
 
@@ -181,7 +184,7 @@ def page_content(final: dict, frozen: dict, stress: dict, profile: dict, fuzz: d
             "note": f"Positive numbers are costs. Forced means lots bought by the deadline rule. Across {len(moved)} moved assumptions, the result reverses in {reversed_} and loses its clear interval in {unclear}.",
         },
         "checks": [
-            f"{evidence['tests']} tests at {evidence['coverage_pct']}% line coverage, starting from a hand-worked trace with an assertion for every book state.",
+            f"{evidence['tests']} tests, with {evidence['engine_coverage_pct']}% line coverage of the engine and {evidence['coverage_pct']}% overall, starting from a hand-worked trace with an assertion for every book state.",
             f"The compiled C replay matches the Python reference byte for byte, with {fuzz['ledger_divergences'] + fuzz['book_divergences']} divergences in {fuzz['cases']:,} hostile fuzz cases under AddressSanitizer and UBSan.",
             "Strategies receive only delayed data. A test rewrites the future and requires every earlier view to stay identical.",
             f"The hypothesis, split and decision rule were committed before any test day was read. The interval resamples whole days, {paired['days']} of them.",
@@ -218,6 +221,8 @@ def write_demo(study: Study) -> str:
         **page_content(final, frozen, stress, profile, fuzz, evidence, ensure_data(study.plan)["events"]),
     }
     (RESULTS / "demo_run.json").write_text(json.dumps(payload, indent=1) + "\n")
-    html = TEMPLATE.read_text().replace("/*DATA*/null", json.dumps(payload, separators=(",", ":")))
+    # The font is embedded so the page still makes no network requests.
+    font = base64.b64encode(FONT.read_bytes()).decode()
+    html = TEMPLATE.read_text().replace("/*FONT*/", font).replace("/*DATA*/null", json.dumps(payload, separators=(",", ":")))
     OUTPUT.write_text(html)
     return f"Wrote {OUTPUT.relative_to(REPO)}, {len(html) // 1024} KB, {len(scenes)} scenes"

@@ -64,8 +64,8 @@ def test_a_failed_rule_is_called_negative_on_the_page():
     assert "did not pass" in sentence and "mean cost lower" in sentence
 
 
-def test_compact_numbers_keep_one_decimal():
-    assert [compact(11_648_571), compact(100_000), compact(0)] == ["11.6M", "100.0K", "0"]
+def test_compact_numbers_keep_at_most_one_decimal():
+    assert [compact(11_648_571), compact(100_000), compact(0)] == ["11.6M", "100K", "0"]
 
 
 def row(day, strategy, cost):

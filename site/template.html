@@ -6,6 +6,11 @@
 <title>One Order, Two Traders</title>
 <meta name="description" content="A recorded replay of a simulated execution study. Every order is simulated.">
 <style>
+@font-face {
+  font-family: "Geist Serif";
+  src: url(data:font/woff2;base64,/*FONT*/) format("woff2");
+  font-display: swap;
+}
 /* Tokens match qendrimbeka.com and kobamoney.com. */
 :root {
   color-scheme: light;
@@ -16,10 +21,12 @@
   --learned: #0e7350; --baseline: #e39150;
 }
 * { box-sizing: border-box; }
+b, strong, th { font-weight: 400; }
 html { scroll-behavior: smooth; }
 body {
   margin: 0; background: #fff; color: var(--ink);
-  font: 16px/24px -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font: 16px/24px "Geist Serif", Georgia, serif;
+  font-synthesis: none;
   -webkit-font-smoothing: antialiased;
 }
 ::selection { background: #1d3a2a26; }
@@ -31,9 +38,9 @@ body {
 
 .page { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 72px 24px 80px; }
 .eyebrow { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
-h1 { font-size: clamp(2.25rem, 1.6rem + 2.6vw, 3rem); line-height: 1.04; letter-spacing: -0.032em; font-weight: 600; margin: 0; }
+h1 { font-size: clamp(2.25rem, 1.6rem + 2.6vw, 3rem); line-height: 1.04; letter-spacing: -0.032em; font-weight: 400; margin: 0; }
 .lede { max-width: 34rem; margin: 12px 0 0; font-size: clamp(1.0625rem, 1rem + .3vw, 1.1875rem); line-height: 1.5; color: var(--body); }
-h2 { font-size: 1.5rem; line-height: 1.15; letter-spacing: -0.028em; font-weight: 600; margin: 0 0 8px; }
+h2 { font-size: 1.5rem; line-height: 1.15; letter-spacing: -0.028em; font-weight: 400; margin: 0 0 8px; }
 h3 { font-size: 13px; line-height: 20px; font-weight: 400; color: var(--muted); margin: 0 0 6px; }
 section { margin-top: 72px; }
 p.text { font-size: 15.5px; line-height: 1.65; color: var(--body); margin: 0 0 12px; }
@@ -41,7 +48,7 @@ p.text { font-size: 15.5px; line-height: 1.65; color: var(--body); margin: 0 0 1
 
 .pills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 .pill { display: inline-flex; height: 44px; align-items: center; justify-content: center; padding: 0 20px; border-radius: 999px;
-  font: inherit; font-size: 15px; font-weight: 600; letter-spacing: -0.012em; cursor: pointer; text-decoration: none; transition: background-color .15s; }
+  font: inherit; font-size: 15px; font-weight: 400; letter-spacing: -0.012em; cursor: pointer; text-decoration: none; transition: background-color .15s; }
 .pill.dark { background: #121412; color: #fff; border: 1px solid #ffffff26; box-shadow: 0 1px 2px #0000002e; }
 .pill.dark:hover { background: #2a2d2a; }
 .pill.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); }
@@ -51,7 +58,7 @@ p.text { font-size: 15.5px; line-height: 1.65; color: var(--body); margin: 0 0 1
 
 .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 40px 0 0; }
 .tile { background: var(--tile); border-radius: 18px; padding: 14px 16px; }
-.tile b { display: block; font-size: 1.5rem; line-height: 1; font-weight: 600; letter-spacing: -0.028em; font-variant-numeric: tabular-nums; }
+.tile b { display: block; font-size: 1.5rem; line-height: 1; font-weight: 400; letter-spacing: -0.028em; font-variant-numeric: tabular-nums; }
 .tile span { display: block; margin-top: 6px; font-size: 13px; line-height: 18px; color: var(--muted); }
 
 .simulated { display: flex; gap: 12px; margin-top: 24px; font-size: 14px; line-height: 21px; color: var(--body); }
@@ -74,7 +81,7 @@ input[type=range]::-moz-range-thumb { width: 9px; height: 9px; border-radius: 50
 .person .name { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .swatch { flex: none; width: 18px; height: 0; border-top: 2px solid; }
 .swatch.dashed { border-top-style: dashed; }
-.person b { display: block; margin-top: 6px; font-size: 1.25rem; line-height: 1.1; letter-spacing: -0.02em; font-weight: 600; font-variant-numeric: tabular-nums; }
+.person b { display: block; margin-top: 6px; font-size: 1.25rem; line-height: 1.1; letter-spacing: -0.02em; font-weight: 400; font-variant-numeric: tabular-nums; }
 .person span.sub { display: block; margin-top: 4px; font-size: 13px; line-height: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 24px; margin-top: 24px; }
 
@@ -91,7 +98,7 @@ input[type=range]::-moz-range-thumb { width: 9px; height: 9px; border-radius: 50
 .row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 72px 72px; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14.5px; line-height: 22px; color: var(--body); font-variant-numeric: tabular-nums; }
 .row .n { text-align: right; }
 .row.head { color: var(--muted); font-size: 13px; }
-.row.us { color: var(--ink); font-weight: 600; }
+.row.us { color: var(--ink); font-weight: 400; }
 ul.dashes { list-style: none; margin: 12px 0 0; padding: 0; }
 ul.dashes li { display: flex; gap: 12px; font-size: 15px; line-height: 1.55; color: var(--body); margin-top: 6px; }
 ul.dashes li::before { content: ""; flex: none; width: 12px; height: 1px; margin-top: .75em; background: var(--quiet); }
@@ -209,6 +216,9 @@ function drawRidge() {
   });
 }
 
+// The hairline belongs to the opening. It fades back so tables stay easy to read.
+addEventListener("scroll", () => { $("ridge").style.opacity = Math.max(.25, 1 - scrollY / 800); }, {passive: true});
+
 function stepped(rows, x, y) {
   return rows.map((r, i) => i ? `H${x(r[0]).toFixed(1)}V${y(r[1]).toFixed(1)}` : `M${x(r[0]).toFixed(1)} ${y(r[1]).toFixed(1)}`).join("");
 }
@@ -314,7 +324,7 @@ function render() {
   drawLadder();
   $("who").innerHTML = s.policies.map((p, i) => {
     const q = queueAt(p);
-    return `<div class="person"><div class="name"><i class="swatch ${i ? "dashed" : ""}" style="border-color:${COLORS[i]}"></i>${label(p.name)}</div><b>${signed(p.shortfall_bps)} bps</b><span class="sub">${lotsLeft(p, now, s.target_lots)} lots left, ${q ? q.ahead + " ahead in queue" : "not resting"}</span></div>`;
+    return `<div class="person"><div class="name"><i class="swatch ${i ? "dashed" : ""}" style="border-color:${COLORS[i]}"></i>${label(p.name)}</div><b>${signed(costAt(p, now))} bps so far</b><span class="sub">Finishes at ${signed(p.shortfall_bps)}. ${lotsLeft(p, now, s.target_lots)} lots left, ${q ? q.ahead + " ahead in queue" : "not resting"}</span></div>`;
   }).join("");
   lineChart($("inventory"), s.policies.map(p => pathOf(p, s.target_lots, (f, c) => c - f.qty)), s.target_lots, 0, v => v.toFixed(0));
   const costs = s.policies.map(p => pathOf(p, 0, f => f.cost_bps));
@@ -346,7 +356,7 @@ function evidence() {
   $("table-note").textContent = DATA.table.note;
   $("checks").innerHTML = DATA.checks.map(c => `<li><span>${c}</span></li>`).join("");
   $("limits").innerHTML = DATA.limits.map(c => `<li><span>${c}</span></li>`).join("");
-  $("foot").textContent = `Generated from run ${DATA.commit.slice(0, 12)} with inputs ${DATA.input_sha256.slice(0, 12)}. Prices in ticks, sizes in lots. All orders simulated.`;
+  $("foot").innerHTML = `Generated from run ${DATA.commit.slice(0, 12)} with inputs ${DATA.input_sha256.slice(0, 12)}. Prices in ticks, sizes in lots. All orders simulated. <a href="https://github.com/qbeka/market-replay">Source and full report</a>.`;
 }
 
 function init() {
