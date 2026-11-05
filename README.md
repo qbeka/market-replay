@@ -17,7 +17,7 @@ It answers one question. You have a small order to finish within a minute. Shoul
 | **Tests** | 140 tests, with 99% line coverage of the engine and 81% of the package |
 | **Stress** | 18 moved assumptions. The result reverses in 1 and loses its clear interval in 2. |
 
-Measured on 2026-11-05 on one Apple M5 Pro Mac. Other projects shared the machine, so speed comes from the best of 15 runs. Replay cannot measure market impact, and the mean gain is small. [What the numbers leave out](#what-the-numbers-leave-out) has the details.
+Measured on one Apple M5 Pro Mac. Other projects shared the machine, so speed comes from the best of 15 runs. Replay cannot measure market impact, and the mean gain is small. [What the numbers leave out](#what-the-numbers-leave-out) has the details.
 
 ## See it
 
