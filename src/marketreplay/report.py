@@ -169,14 +169,15 @@ def resume_text(final: dict, frozen: dict, stress: dict, profile: dict, fuzz: di
     other = final["summaries"][frozen["best_baseline"]]
     immediate = final["summaries"]["immediate"]
     fill = final["fill_model_on_test"]
+    versus_immediate = next(c for c in final["comparisons"] if c["b"] == "immediate")
     divergences = fuzz["ledger_divergences"] + fuzz["book_divergences"]
     scenarios = len(stress["scenarios"]) - 1
     if verdict["improved"]:
         outcome = (
             f"cut forced completion from {other['forced_lot_pct']:.1f}% to {learned['forced_lot_pct']:.1f}% of lots against the "
-            f"{baseline} and mean implementation shortfall by {-paired['mean_diff_bps']:.2f} bps (95% CI "
-            f"{-paired['ci_high']:.2f} to {-paired['ci_low']:.2f}), {immediate['mean_bps'] - learned['mean_bps']:.2f} bps "
-            "below immediate crossing"
+            f"{baseline}, with mean implementation shortfall {-paired['mean_diff_bps']:.2f} bps lower (95% CI "
+            f"{-paired['ci_high']:.2f} to {-paired['ci_low']:.2f}) and {-versus_immediate['mean_diff_bps']:.2f} bps below "
+            "immediate crossing"
         )
     else:
         outcome = (
@@ -198,8 +199,8 @@ Always say "simulated". The market is a seeded synthetic feed, so these numbers 
 ## Bullets
 
 - Built an event-driven limit order book replay and execution simulator in Python and C, modeling queue position, partial fills, in-flight cancels and three separate latency clocks over {events / 1e6:.1f}M market-by-order events, with the C core sustaining {profile['compiled_book']['events_per_s'] / 1e6:.1f}M events per second on one core ({profile['speedup_book']:.0f}x the reference).
-- Verified the compiled engine against the Python reference with sanitized differential fuzzing: {divergences} ledger or book divergences across {fuzz['cases']:,} hostile cases under ASan and UBSan, backed by {evidence['tests']} tests at {evidence['coverage_pct']}% coverage and hand-worked traces.
-- Trained a calibrated gradient-boosted fill model (Brier {fill['brier']:.3f} against {fill['base_rate_brier']:.3f} base rate, {fill['ece']:.3f} calibration error) and embedded it in a constrained execution controller that {outcome}, on {learned['parents']:,} paired simulated orders.
+- Verified the compiled engine against the Python reference with sanitized differential fuzzing: {divergences} ledger or book divergences across {fuzz['cases']:,} hostile cases under ASan and UBSan, backed by {evidence['tests']} tests at {evidence['engine_coverage_pct']}% engine line coverage and hand-worked traces.
+- Trained an isotonic-calibrated gradient-boosted fill model (Brier {fill['brier']:.3f} against {fill['base_rate_brier']:.3f} base rate, {fill['ece']:.3f} calibration error) and embedded it in a constrained execution controller that {outcome}, on {learned['parents']:,} paired simulated orders.
 - Ran a pre-registered evaluation with a committed freeze of hypothesis, split and decision rule, day-level bootstrap intervals over {paired['days']} days and {scenarios} fill-assumption stress scenarios, after an adversarial code review caught 3 look-ahead and fill biases before the final test.
 
 ## One line version
@@ -212,7 +213,7 @@ Built a Python and C limit order book simulator ({profile['compiled_book']['even
 |---|---|---|
 | Throughput | `results/profile.json` | `uv run mreplay profile` |
 | Fuzz result | `results/fuzz.json` | `uv run mreplay fuzz` |
-| Tests and coverage | `results/evidence.json` | `uv run mreplay evidence` |
+| Tests and coverage | `results/evidence.json`, where engine means the modules that decide fills, cost and strategy behavior | `uv run mreplay evidence` |
 | Policy result | `results/final.json` | `uv run mreplay final` |
 | Freeze came first | `git log -- results/freeze.json` | The freeze commit predates every test result |
 | Stress scenarios | `results/stress.json` | `uv run mreplay stress` |
@@ -351,7 +352,8 @@ Each policy decision took {profile['policy_decision_us']['p50']:.0f} us at the m
 | Check | Result |
 |---|---:|
 | Tests passing | {evidence['tests']} |
-| Line coverage | {evidence['coverage_pct']}% |
+| Line coverage, engine modules | {evidence['engine_coverage_pct']}% |
+| Line coverage, whole package | {evidence['coverage_pct']}% |
 | Fuzz cases, C against Python, under ASan and UBSan | {fuzz['cases']:,} |
 | Events across fuzz cases | {fuzz['events']:,} |
 | Simulated fills compared | {fuzz['fills']:,} |
