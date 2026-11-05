@@ -43,4 +43,4 @@ Source: [arXiv:2411.06389v2](https://arxiv.org/abs/2411.06389), revised 1 Novemb
 
 ## Upstream code
 
-No upstream code is copied. numpy, scikit-learn and threadpoolctl are dependencies under BSD-3-Clause. Versions are pinned in `pyproject.toml` and `uv.lock`.
+No upstream code is copied. numpy and scikit-learn are dependencies under BSD-3-Clause. Versions are pinned in `pyproject.toml` and `uv.lock`.

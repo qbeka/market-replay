@@ -6,8 +6,6 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 
-from threadpoolctl import threadpool_limits
-
 from .events import Event, Kind
 from .execution import ExecConfig, Run, run_session
 from .ledger import Role
@@ -78,12 +76,8 @@ def evaluate_day(study: Study, fitted: Fitted, names: list[str], config: ExecCon
     return [to_row(day, name, run) for name, run in zip(labels, runs)]
 
 
-def _one_thread_per_worker() -> None:
-    threadpool_limits(1)  # Workers run days in parallel, so models must not also spawn threads.
-
-
 def evaluate_days(study: Study, fitted: Fitted, names: list[str], config: ExecConfig, days: list[int]) -> list[Row]:
-    with ProcessPoolExecutor(WORKERS, initializer=_one_thread_per_worker) as pool:
+    with ProcessPoolExecutor(WORKERS) as pool:
         per_day = pool.map(partial(evaluate_day, study, fitted, names, config), days)
         return [row for rows in per_day for row in rows]
 
