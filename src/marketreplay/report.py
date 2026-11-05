@@ -114,6 +114,7 @@ def plot_stress(stress: dict) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
+    matplotlib.rcParams["svg.hashsalt"] = "marketreplay"  # Same bytes on every run.
     import matplotlib.pyplot as plt
 
     names = ordered_scenarios(stress)[::-1]
@@ -132,7 +133,7 @@ def plot_stress(stress: dict) -> None:
     for spine in ax.spines.values():
         spine.set_visible(False)
     fig.tight_layout()
-    fig.savefig(FIGURES / "stress_forest.svg")
+    fig.savefig(FIGURES / "stress_forest.svg", metadata={"Date": None})
     plt.close(fig)
 
 
@@ -140,6 +141,7 @@ def plot_calibration(table: list[dict]) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
+    matplotlib.rcParams["svg.hashsalt"] = "marketreplay"
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(figsize=(4.4, 4.2))
@@ -156,7 +158,7 @@ def plot_calibration(table: list[dict]) -> None:
     for spine in ax.spines.values():
         spine.set_visible(False)
     fig.tight_layout()
-    fig.savefig(FIGURES / "calibration.svg")
+    fig.savefig(FIGURES / "calibration.svg", metadata={"Date": None})
     plt.close(fig)
 
 

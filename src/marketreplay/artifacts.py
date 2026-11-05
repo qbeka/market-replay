@@ -21,6 +21,7 @@ ARTIFACTS = {
     "results/evidence.json": "mreplay evidence",
     "docs/report.md": "mreplay report",
     "docs/resume.md": "mreplay report",
+    "docs/figures": "mreplay report",
     "site/index.html": "mreplay demo",
     "results/demo_run.json": "mreplay demo",
 }

@@ -194,6 +194,18 @@
    "made_by": "mreplay report"
   },
   {
+   "path": "docs/figures/calibration.svg",
+   "bytes": 24507,
+   "sha256": "b6629647091fbd7c6d7c262845ec716c5ba1e7ce8c73e72e1607404f3f4acf7c",
+   "made_by": "mreplay report"
+  },
+  {
+   "path": "docs/figures/stress_forest.svg",
+   "bytes": 59865,
+   "sha256": "f49b222cce3705d2ccdc0b4c858ce56b9caf131cc20c3b30213efba050920d6c",
+   "made_by": "mreplay report"
+  },
+  {
    "path": "site/index.html",
    "bytes": 221820,
    "sha256": "5a92803a58854d26268833bd4be686070b747076ce8d2d6e96ac8cdc67e42620",
