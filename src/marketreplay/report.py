@@ -97,7 +97,7 @@ def reversals(stress: dict) -> str:
     other_cheapest = [n for n, e in stress["scenarios"].items() if e["cheapest"] != base["cheapest"]]
     items.append(
         f"- The cheapest strategy under base assumptions is {NAMES.get(base['cheapest'])}. It loses that place in "
-        f"{len(other_cheapest)} scenarios"
+        f"{len(other_cheapest)} {'scenario' if len(other_cheapest) == 1 else 'scenarios'}"
         + (f": {', '.join(other_cheapest)}." if other_cheapest else ".")
     )
     worst = stress["scenarios"].get("worst_case_fills")
@@ -198,7 +198,7 @@ Always say "simulated". The market is a seeded synthetic feed, so these numbers 
 
 ## Bullets
 
-- Built an event-driven limit order book replay and execution simulator in Python and C, modeling queue position, partial fills, in-flight cancels and three separate latency clocks over {events / 1e6:.1f}M market-by-order events, with the C core sustaining {profile['compiled_book']['events_per_s'] / 1e6:.1f}M events per second on one core ({profile['speedup_book']:.0f}x the reference).
+- Built an event-driven limit order book replay and execution simulator in Python and C, modeling queue position, partial fills, in-flight cancels and three separate latency clocks over {events / 1e6:.1f}M market-by-order events, with the C core replaying {profile['compiled_book']['events_per_s'] / 1e6:.1f}M events per second on one core ({profile['speedup_book']:.0f}x the Python reference).
 - Verified the compiled engine against the Python reference with sanitized differential fuzzing: {divergences} ledger or book divergences across {fuzz['cases']:,} hostile cases under ASan and UBSan, backed by {evidence['tests']} tests at {evidence['engine_coverage_pct']}% engine line coverage and hand-worked traces.
 - Trained an isotonic-calibrated gradient-boosted fill model (Brier {fill['brier']:.3f} against {fill['base_rate_brier']:.3f} base rate, {fill['ece']:.3f} calibration error) and embedded it in a constrained execution controller that {outcome}, on {learned['parents']:,} paired simulated orders.
 - Ran a pre-registered evaluation with a committed freeze of hypothesis, split and decision rule, day-level bootstrap intervals over {paired['days']} days and {scenarios} fill-assumption stress scenarios, after an adversarial code review caught 3 look-ahead and fill biases before the final test.
@@ -329,16 +329,16 @@ Recorded orders are smaller than probes, so their rate should run higher. With {
 
 ## Speed and memory
 
-Measured on {manifest['hardware']['cpu']}, one core, day {profile['day']} with {profile['events']:,} events, median of {profile['python_book']['runs']} runs. The 1 minute load average was {profile['load_average_1m_before']:.1f} before the run and {profile['load_average_1m_after']:.1f} after it. The compiled replay was profiled only after its ledgers matched the reference exactly.
+Measured on {manifest['hardware']['cpu']}, one core, day {profile['day']} with {profile['events']:,} events, over {profile['python_book']['runs']} runs each. Other work shared this Mac: the 1 minute load average was {profile['load_average_1m_before']:.1f} before the run and {profile['load_average_1m_after']:.1f} after it. Events per second therefore come from the best run, the one disturbed least. The compiled replay was profiled only after its ledgers matched the reference exactly.
 
-| Path | Events per second | Seconds, median | Range |
+| Path | Events per second, best run | Seconds, median | Range |
 |---|---:|---:|---|
 | Book replay, Python | {profile['python_book']['events_per_s']:,.0f} | {profile['python_book']['median']:.4f} | {profile['python_book']['min']:.4f} to {profile['python_book']['max']:.4f} |
 | Book replay, compiled C | {profile['compiled_book']['events_per_s']:,.0f} | {profile['compiled_book']['median']:.4f} | {profile['compiled_book']['min']:.4f} to {profile['compiled_book']['max']:.4f} |
 | Replay and execution, Python | {profile['python_exec']['events_per_s']:,.0f} | {profile['python_exec']['median']:.4f} | {profile['python_exec']['min']:.4f} to {profile['python_exec']['max']:.4f} |
 | Replay and execution, compiled C | {profile['compiled_exec']['events_per_s']:,.0f} | {profile['compiled_exec']['median']:.4f} | {profile['compiled_exec']['min']:.4f} to {profile['compiled_exec']['max']:.4f} |
 
-Execution rows cover {profile['strategies_in_exec_run']} strategies on {profile['parents_in_exec_run']} parents in one pass. The Python execution time includes those strategies' decisions, and the compiled time replays their recorded commands, so that speedup of {profile['speedup_exec']:.1f}x does not compare like with like. The book speedup of {profile['speedup_book']:.1f}x does. The compiled book checksum also updates after each event, which slows it slightly.
+Execution rows cover {profile['strategies_in_exec_run']} strategies on {profile['parents_in_exec_run']} parents in one pass. The Python execution time includes those strategies' decisions, and the compiled time replays their recorded commands, so that speedup of {profile['speedup_exec']:.1f}x does not compare like with like. The book speedup of {profile['speedup_book']:.1f}x, best run against best run, does. The compiled book checksum also updates after each event, which slows it slightly.
 
 | Memory, peak | MB |
 |---|---:|
