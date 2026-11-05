@@ -57,3 +57,10 @@ What held up: the book against a brute-force FIFO over 183,621 steps, conservati
 - **Change:** the package sets `OMP_NUM_THREADS=1` before scikit-learn loads, and the `threadpool_limits` call is gone.
 - **Check:** the stress run's base scenario, run after the change, matched the final test on all 5,508 shared rows, so the fix changed speed and nothing else.
 - **Lesson:** the worker count looked parallel and the CPU looked busy. Only timing a single day alone showed the waste.
+
+## 8. The first speedup figure was mostly the machine's load
+
+- **Setup:** the first profile, five runs each with the load average near 40, reported a book speedup of 23 times from medians.
+- **Result:** Python's five runs ranged from 0.074 s to 0.498 s while the compiled replay stayed within 6%. Python, at about a tenth of a second per run, took the hit from contention and the short compiled run did not.
+- **Change:** 15 runs each, and speed now comes from the best run, because other work can only slow a run. Median and range stay in the record.
+- **Lesson:** a ratio of two medians under load measures the load. The resume number would have been about 3 times too high.

@@ -1,8 +1,11 @@
 """Speed and memory of the reference and the compiled replay, on one recorded session.
 
-Every measurement runs in its own single-threaded process, five times, and the median is
-reported with the range. Peak memory comes from /usr/bin/time, which reports the whole
-process. The Python number includes the interpreter and numpy.
+Every book measurement runs in its own single-threaded process. Speed comes from the best
+run: other work slows a run and nothing speeds it up, so the minimum is the run that was
+disturbed least. On a loaded machine the median made Python look 3 times slower than it is,
+which inflated the speedup. The median and range stay in the record. Peak memory comes from
+/usr/bin/time, which reports the whole process. The Python number includes the interpreter
+and numpy.
 """
 
 import json
@@ -23,7 +26,8 @@ from .pipeline import RESULTS, load_fitted
 from .roster import build as build_strategy
 from .study import Study, load_day, load_records, parents_for_day, plan_folder
 
-REPEATS = 5
+REPEATS = 15
+DECISION_REPEATS = 3
 PROFILE_DAY = 100
 
 
@@ -100,14 +104,17 @@ def profile(study: Study) -> dict:
         write_tape(runs, tape)
         compiled_exec = [run_exec(day_path, tape, config).seconds for _ in range(REPEATS)]
 
-    timed = []
-    work = []
-    for parent in parents:
-        strategy = Timed(build_strategy(fitted, "learned", parent))
-        timed.append(strategy)
-        work.append((parent, strategy))
-    replay_session(events, work, fitted.config)
-    decisions = sorted(s for strategy in timed for s in strategy.seconds)
+    decision_passes = []
+    for _ in range(DECISION_REPEATS):
+        timed = []
+        work = []
+        for parent in parents:
+            strategy = Timed(build_strategy(fitted, "learned", parent))
+            timed.append(strategy)
+            work.append((parent, strategy))
+        replay_session(events, work, fitted.config)
+        decision_passes.append(sorted(s for strategy in timed for s in strategy.seconds))
+    decisions = min(decision_passes, key=lambda seconds: seconds[len(seconds) // 2])
 
     count = len(records)
     python_book_s = _spread(python_book)
@@ -121,12 +128,12 @@ def profile(study: Study) -> dict:
         "events": count,
         "strategies_in_exec_run": len(names),
         "parents_in_exec_run": len(parents),
-        "python_book": {**python_book_s, "events_per_s": count / python_book_s["median"]},
-        "compiled_book": {**compiled_book_s, "events_per_s": count / compiled_book_s["median"]},
-        "python_exec": {**python_exec_s, "events_per_s": count / python_exec_s["median"]},
-        "compiled_exec": {**compiled_exec_s, "events_per_s": count / compiled_exec_s["median"]},
-        "speedup_book": python_book_s["median"] / compiled_book_s["median"],
-        "speedup_exec": python_exec_s["median"] / compiled_exec_s["median"],
+        "python_book": {**python_book_s, "events_per_s": count / python_book_s["min"]},
+        "compiled_book": {**compiled_book_s, "events_per_s": count / compiled_book_s["min"]},
+        "python_exec": {**python_exec_s, "events_per_s": count / python_exec_s["min"]},
+        "compiled_exec": {**compiled_exec_s, "events_per_s": count / compiled_exec_s["min"]},
+        "speedup_book": python_book_s["min"] / compiled_book_s["min"],
+        "speedup_exec": python_exec_s["min"] / compiled_exec_s["min"],
         "peak_rss_mb": {"python_book": python_rss / 2**20, "compiled_book": compiled_rss / 2**20},
         "policy_decision_us": {
             "count": len(decisions),
