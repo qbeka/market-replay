@@ -160,7 +160,9 @@ def page_content(final: dict, frozen: dict, stress: dict, profile: dict, fuzz: d
     order = sorted((n for n in summaries if n != "oracle_volume"), key=lambda n: summaries[n]["mean_bps"])
     learned = summaries["learned"]
     paired = final["verdict"]["paired"]
-    changed = sum(1 for e in stress["scenarios"].values() if e["conclusion_changes"])
+    moved = {n: e["learned_vs_baseline"] for n, e in stress["scenarios"].items() if n != "base"}
+    reversed_ = sum(1 for c in moved.values() if c["ci_low"] > 0)
+    unclear = sum(1 for n, c in moved.items() if stress["scenarios"][n]["conclusion_changes"] and c["ci_low"] <= 0)
     return {
         "tiles": [
             {"value": compact(events), "label": "order events replayed"},
@@ -176,7 +178,7 @@ def page_content(final: dict, frozen: dict, stress: dict, profile: dict, fuzz: d
                 {"name": n, "mean": summaries[n]["mean_bps"], "p95": summaries[n]["p95_bps"], "forced": summaries[n]["forced_lot_pct"]}
                 for n in order
             ],
-            "note": f"Positive numbers are costs. Forced means lots bought by the deadline rule. Under {len(stress['scenarios']) - 1} moved fill assumptions, the paired result changes sign in {changed}.",
+            "note": f"Positive numbers are costs. Forced means lots bought by the deadline rule. Across {len(moved)} moved assumptions, the result reverses in {reversed_} and loses its clear interval in {unclear}.",
         },
         "checks": [
             f"{evidence['tests']} tests at {evidence['coverage_pct']}% line coverage, starting from a hand-worked trace with an assertion for every book state.",

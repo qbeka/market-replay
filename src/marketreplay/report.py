@@ -58,12 +58,18 @@ def regime_table(regimes: dict, baseline: str) -> str:
     return "\n".join(lines)
 
 
+def ordered_scenarios(stress: dict) -> list[str]:
+    """The base case first, then the moved scenarios by name."""
+    return ["base"] + sorted(n for n in stress["scenarios"] if n != "base")
+
+
 def stress_table(stress: dict) -> str:
     lines = [
-        "| Scenario | Cheapest strategy | Learned minus baseline bps | 95% interval | Rule passes | Sign changes |",
+        "| Scenario | Cheapest strategy | Learned minus baseline bps | 95% interval | Rule passes | Evidence changes |",
         "|---|---|---:|---|---|---|",
     ]
-    for name, entry in stress["scenarios"].items():
+    for name in ordered_scenarios(stress):
+        entry = stress["scenarios"][name]
         c = entry["learned_vs_baseline"]
         lines.append(
             f"| {name} | {NAMES.get(entry['cheapest'], entry['cheapest'])} | {c['mean_diff_bps']:.3f} "
@@ -77,10 +83,16 @@ def reversals(stress: dict) -> str:
     """Plain statements of what changes across scenarios, read from the table."""
     base = stress["scenarios"]["base"]
     items = []
-    changed = [n for n, e in stress["scenarios"].items() if e["conclusion_changes"]]
+    scenarios = stress["scenarios"]
+    reversed_ = [n for n, e in scenarios.items() if e["learned_vs_baseline"]["ci_low"] > 0]
+    unclear = [n for n, e in scenarios.items() if e["conclusion_changes"] and n not in reversed_]
     items.append(
-        f"- The sign of the paired result changes in {len(changed)} of {len(stress['scenarios']) - 1} moved scenarios"
-        + (f": {', '.join(changed)}." if changed else ".")
+        f"- The paired result reverses, with the interval above zero, in {len(reversed_)} of {len(scenarios) - 1} moved scenarios"
+        + (f": {', '.join(reversed_)}." if reversed_ else ".")
+    )
+    items.append(
+        f"- The interval reaches zero in {len(unclear)} more, so the evidence for a difference is lost there"
+        + (f": {', '.join(unclear)}." if unclear else ".")
     )
     other_cheapest = [n for n, e in stress["scenarios"].items() if e["cheapest"] != base["cheapest"]]
     items.append(
@@ -104,7 +116,7 @@ def plot_stress(stress: dict) -> None:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    names = list(stress["scenarios"])[::-1]
+    names = ordered_scenarios(stress)[::-1]
     entries = [stress["scenarios"][n]["learned_vs_baseline"] for n in names]
     fig, ax = plt.subplots(figsize=(8, 0.34 * len(names) + 1.2))
     for y, c in enumerate(entries):
@@ -161,9 +173,10 @@ def resume_text(final: dict, frozen: dict, stress: dict, profile: dict, fuzz: di
     scenarios = len(stress["scenarios"]) - 1
     if verdict["improved"]:
         outcome = (
-            f"cut mean implementation shortfall by {-paired['mean_diff_bps']:.2f} bps against the {baseline} "
-            f"(95% CI {-paired['ci_high']:.2f} to {-paired['ci_low']:.2f}) and forced completion from "
-            f"{other['forced_lot_pct']:.1f}% to {learned['forced_lot_pct']:.1f}% of lots"
+            f"cut forced completion from {other['forced_lot_pct']:.1f}% to {learned['forced_lot_pct']:.1f}% of lots against the "
+            f"{baseline} and mean implementation shortfall by {-paired['mean_diff_bps']:.2f} bps (95% CI "
+            f"{-paired['ci_high']:.2f} to {-paired['ci_low']:.2f}), {immediate['mean_bps'] - learned['mean_bps']:.2f} bps "
+            "below immediate crossing"
         )
     else:
         outcome = (
@@ -185,7 +198,7 @@ Always say "simulated". The market is a seeded synthetic feed, so these numbers 
 ## Bullets
 
 - Built an event-driven limit order book replay and execution simulator in Python and C, modeling queue position, partial fills, in-flight cancels and three separate latency clocks over {events / 1e6:.1f}M market-by-order events, with the C core sustaining {profile['compiled_book']['events_per_s'] / 1e6:.1f}M events per second on one core ({profile['speedup_book']:.0f}x the reference).
-- Proved the compiled engine exact with sanitized differential fuzzing: {divergences} ledger or book divergences across {fuzz['cases']:,} hostile cases under ASan and UBSan, backed by {evidence['tests']} tests at {evidence['coverage_pct']}% coverage and hand-worked traces.
+- Verified the compiled engine against the Python reference with sanitized differential fuzzing: {divergences} ledger or book divergences across {fuzz['cases']:,} hostile cases under ASan and UBSan, backed by {evidence['tests']} tests at {evidence['coverage_pct']}% coverage and hand-worked traces.
 - Trained a calibrated gradient-boosted fill model (Brier {fill['brier']:.3f} against {fill['base_rate_brier']:.3f} base rate, {fill['ece']:.3f} calibration error) and embedded it in a constrained execution controller that {outcome}, on {learned['parents']:,} paired simulated orders.
 - Ran a pre-registered evaluation with a committed freeze of hypothesis, split and decision rule, day-level bootstrap intervals over {paired['days']} days and {scenarios} fill-assumption stress scenarios, after an adversarial code review caught 3 look-ahead and fill biases before the final test.
 
