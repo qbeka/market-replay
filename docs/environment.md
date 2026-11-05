@@ -20,6 +20,18 @@ Other projects ran on this Mac during the study, with a load average near 40 dur
 
 `elapsed_s` in `results/final.json` is 37,835 s. That covers a run with the thread problem in [experiments.md](experiments.md), entry 7, and two periods when it was paused for other work. Do not read it as the cost of the final test. After the fix, 19 stress scenarios on the same 34 days took 641 s.
 
-## Hash stability
+## Reproduction
 
-The synthetic feed comes from a seeded generator and is checked by SHA-256. Hashes of pickled models and floating point results can change across chips, operating systems or library versions, so a different machine may need its own `fit`, `tune` and `freeze`.
+Checked on 2026-11-05 from a fresh clone on this Mac:
+
+| Check | Result |
+|---|---|
+| Rebuilt feed, 11,648,571 events | Same input hash |
+| `results/raw/validation.csv` after refit and tune | Byte identical |
+| `results/raw/test.csv`, final test with committed models | Byte identical, in 40 s |
+| Refit models against committed models | Identical predictions, max difference 0.0 on 5,000 random rows |
+| `results/fitted/fitted.pkl` after refit | 23 bytes different, so the freeze guard refuses it |
+| `report`, `demo` and `mreplay manifest --check` | All files match |
+| Tests | 140 passing |
+
+The feed is checked by SHA-256. Pickled models and floating point results can change across chips, operating systems or library versions, so a different machine may need its own `fit`, `tune` and `freeze`.

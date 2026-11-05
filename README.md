@@ -41,13 +41,13 @@ Install the pinned dependencies. uv fetches Python 3.12 if you need it.
 uv sync
 ```
 
-Run the smoke test. In about a second, it checks the hand-worked trace, runs the baselines on a tiny study and compares C with Python.
+Run the smoke test. In a few seconds, it checks the hand-worked trace, runs the baselines on a tiny study and compares C with Python.
 
 ```bash
 uv run mreplay smoke
 ```
 
-Print the full story of one simulated order. You need the study data first, about 2 minutes and 534 MB.
+Print the full story of one simulated order. You need the study data first, about 90 seconds and 534 MB.
 
 ```bash
 uv run mreplay generate
@@ -71,7 +71,7 @@ Check that every saved result still matches its recorded hash.
 uv run mreplay manifest --check
 ```
 
-Run the full benchmark. It takes about 45 minutes on 8 cores, and you need `generate` first.
+Run the full benchmark. It takes about 40 minutes on 8 cores, and you need `generate` first.
 
 ```bash
 uv run mreplay benchmark
@@ -81,11 +81,11 @@ The stages run in this order. Each one saves to `results/` or `docs/`.
 
 | Command | What it does | Time |
 |---|---|---:|
-| `mreplay generate` | Writes 120 seeded days, 11.6M events | 2 min |
-| `mreplay fit` | Fits fill models and the comparator on days 0 to 59 | 5 min |
-| `mreplay tune` | Picks settings on days 61 to 84 | 4 min |
+| `mreplay generate` | Writes 120 seeded days, 11.6M events | 90 s |
+| `mreplay fit` | Fits fill models and the comparator on days 0 to 59 | 1 min |
+| `mreplay tune` | Picks settings on days 61 to 84 | 2 min |
 | `mreplay freeze` | Writes the hypothesis, split and rule. Commit this file before testing. | 1 s |
-| `mreplay final` | The one evaluation on days 86 to 119 | 1 min |
+| `mreplay final` | The one evaluation on days 86 to 119 | 40 s |
 | `mreplay stress` | Reruns frozen strategies under 18 moved assumptions | 11 min |
 | `mreplay profile` | Measures speed and memory | 2 min |
 | `mreplay fuzz` | Runs 100,000 cases of C against Python under sanitizers | 23 min |
@@ -94,7 +94,9 @@ The stages run in this order. Each one saves to `results/` or `docs/`.
 | `mreplay demo` | Writes `site/index.html` from a recorded run | 10 s |
 | `mreplay manifest` | Hashes every saved result | 1 s |
 
-`mreplay final` refuses to run unless `results/freeze.json` is committed and the fitted models and inputs still match it. Hashes of pickled models can differ on another chip or library version. If yours do, run your own `fit`, `tune` and `freeze`.
+`mreplay final` refuses to run unless `results/freeze.json` is committed and the fitted models and inputs still match it.
+
+A fresh clone on the same Mac rebuilt the feed to the same input hash. With the committed models, it reproduced `results/raw/test.csv` byte for byte in 40 s, and validation results matched too. A refit gave identical predictions, but its pickle differed by 23 bytes, so the freeze guard refuses it. On another machine, expect to run your own `fit`, `tune` and `freeze`.
 
 ## How it works
 
