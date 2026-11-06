@@ -7,7 +7,6 @@ undefined behavior also fails the case. Every Python ledger must also conserve.
 
 Feeds are hostile on purpose: sequence gaps, impossible events, halts, mid-feed
 resynchronization, negative prices, and orders landing exactly on deadlines.
-The generator's approach came from the review in docs/experiments.md.
 """
 
 import json
