@@ -201,14 +201,14 @@
   },
   {
    "path": "site/index.html",
-   "bytes": 221820,
-   "sha256": "5a92803a58854d26268833bd4be686070b747076ce8d2d6e96ac8cdc67e42620",
+   "bytes": 467683,
+   "sha256": "380d73170254e56f6d5f4386376df8b1ea02de60e1bed1eb032bb6cec653ca2e",
    "made_by": "mreplay demo"
   },
   {
    "path": "results/demo_run.json",
-   "bytes": 298088,
-   "sha256": "4e0998ce550988f7a0c93f9ea8748de6b0acaba8746616192e65a718193986a1",
+   "bytes": 440603,
+   "sha256": "f4e42d0a4925c2a6e344dc1600b0813fadefe571083cca06da68a8f1b2256220",
    "made_by": "mreplay demo"
   }
  ]

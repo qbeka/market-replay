@@ -6,7 +6,9 @@ Scenes are chosen by rule from the raw test results, so they cannot be cherry-pi
     biggest win the parent where the learned policy gained the most on the baseline
     worst loss  the parent where it lost the most
 
-Every number on the page comes from the replay of that parent.
+Every number on the page comes from the replay of that parent. The page draws only the
+frames made here, one for each moment a recorded event changed something, so a trade
+lands at its recorded time however smoothly the clock moves between frames.
 """
 
 import base64
@@ -17,17 +19,37 @@ import numpy as np
 
 from .evaluate import read_rows
 from .execution import replay_session
-from .features import mid
 from .metrics import shortfall_bps
 from .pipeline import FREEZE_PATH, RESULTS, load_fitted
 from .roster import build
-from .study import REPO, Study, ensure_data, load_day, parents_for_day
+from .study import REPO, Study, load_day, parents_for_day
 
 TEMPLATE = REPO / "site" / "template.html"
 OUTPUT = REPO / "site" / "index.html"
-FONT = REPO / "site" / "fonts" / "GeistSerif-Regular.woff2"
+FONTS = {
+    "/*GEIST_SERIF*/": REPO / "site" / "fonts" / "GeistSerif-Regular.woff2",
+    "/*GEIST_REGULAR*/": REPO / "site" / "fonts" / "Geist-Regular.woff2",
+    "/*GEIST_MEDIUM*/": REPO / "site" / "fonts" / "Geist-Medium.woff2",
+}
+LABELS = {
+    "learned": "Learned policy",
+    "immediate": "Immediate cross",
+    "equal_time": "Equal time",
+    "volume_schedule": "Volume schedule",
+    "passive_only": "Passive only",
+    "urgency": "Urgency rule",
+    "fitted_q": "Fitted Q",
+    "hv_random": "Random",
+    "oracle_volume": "Oracle schedule",
+}
 SHORT = {"learned": "Learned", "urgency": "Urgency"}
+MOVED = {
+    "participation_10pct": "a 10% participation cap",
+    "latency_plus_50ms": "50 ms of added latency",
+    "latency_plus_250ms": "250 ms of added latency",
+}
 SETTLE_S = 0.05  # A decision's own orders land inside this window, at the recorded latency.
+THIN_SPREAD_TICKS = 10
 MINUS = "\u2212"
 
 
@@ -46,13 +68,9 @@ def choose_scenes(rows, baseline: str) -> list[dict]:
     worst = max(disagreed, key=lambda item: (item[0], item[1]))
     share = 100 * len(disagreed) / len(differences)
     return [
-        {
-            "title": "A typical order",
-            "rule": f"The traders acted differently on {share:.0f}% of orders. This is the median of those orders.",
-            "key": typical[1],
-        },
-        {"title": "The biggest win", "rule": "The order where the learned policy finished furthest ahead of the other trader.", "key": best[1]},
-        {"title": "The worst loss", "rule": "The order where the learned policy finished furthest behind the other trader.", "key": worst[1]},
+        {"title": "Typical order", "rule": f"This is the median of the {share:.0f}% of orders where the two acted differently", "key": typical[1]},
+        {"title": "Biggest win", "rule": "This is the order where the learned policy finished furthest ahead", "key": best[1]},
+        {"title": "Worst loss", "rule": "This is the order where the learned policy finished furthest behind", "key": worst[1]},
     ]
 
 
@@ -239,6 +257,7 @@ def scene_data(study: Study, fitted, scene: dict, baseline: str, limits: dict) -
         policies.append(
             {
                 "name": name,
+                "label": LABELS[name],
                 "short": SHORT[name],
                 "shortfall_bps": round(shortfall_bps(run.ledger), 3),
                 "fills": fills,
@@ -246,9 +265,12 @@ def scene_data(study: Study, fitted, scene: dict, baseline: str, limits: dict) -
                 "frames": build_frames(name, events, queue, fills, side, parent.target_lots, limits),
             }
         )
+    spreads = sorted(row["ask"] - row["bid"] for row in book)
+    spread = spreads[len(spreads) // 2]
+    thin = f", in a thin market with a median spread of {spread} ticks" if spread >= THIN_SPREAD_TICKS else ""
     return {
         "title": scene["title"],
-        "rule": scene["rule"],
+        "rule": scene["rule"] + thin,
         "day": day,
         "parent_id": parent_id,
         "side": side,
@@ -261,14 +283,6 @@ def scene_data(study: Study, fitted, scene: dict, baseline: str, limits: dict) -
         "stops": decision_stops(policies),
         "result": result_sentence(policies),
     }
-
-
-def session_ridge(snapshots: list, points: int = 120) -> list[float]:
-    """One session's midpoint, smoothed and thinned into a calm line behind the page."""
-    mids = np.array([m for m in (mid(s) for s in snapshots) if m is not None])
-    width = max(1, len(mids) // 40)
-    smooth = np.convolve(mids, np.ones(width) / width, mode="valid")
-    return [round(float(v), 2) for v in smooth[:: max(1, len(smooth) // points)]]
 
 
 def compact(value: float) -> str:
@@ -290,45 +304,73 @@ def verdict_sentence(verdict: dict, baseline: str) -> str:
     return f"The learned policy did not pass the rule frozen before the test. Against the {name} rule it averaged {span}. Failed: {failed}. A negative result is a valid finding."
 
 
-def page_content(final: dict, frozen: dict, stress: dict, profile: dict, fuzz: dict, evidence: dict, events: int) -> dict:
-    """Every sentence and number on the page, read from saved results."""
+def moved_sentence(name: str, entry: dict) -> str:
+    """One stress scenario that changed the conclusion, stated plainly."""
+    moved, c = MOVED.get(name, name.replace("_", " ")), entry["learned_vs_baseline"]
+    span = f"{signed(c['mean_diff_bps'], 3)} bps with a 95% interval of {signed(c['ci_low'], 3)} to {signed(c['ci_high'], 3)}"
+    if c["ci_low"] > 0:
+        return f"With {moved} the result reverses, and the learned policy averages {span} against the urgency rule."
+    return f"With {moved} the interval reaches zero, at {span} against the urgency rule."
+
+
+def page_content(final: dict, frozen: dict, stress: dict, profile: dict, fuzz: dict, evidence: dict) -> dict:
+    """Every sentence and number in Details, read from saved results."""
+    baseline = frozen["best_baseline"]
     summaries = final["summaries"]
     order = sorted((n for n in summaries if n != "oracle_volume"), key=lambda n: summaries[n]["mean_bps"])
-    learned = summaries["learned"]
-    paired = final["verdict"]["paired"]
-    moved = {n: e["learned_vs_baseline"] for n, e in stress["scenarios"].items() if n != "base"}
-    reversed_ = sum(1 for c in moved.values() if c["ci_low"] > 0)
-    unclear = sum(1 for n, c in moved.items() if stress["scenarios"][n]["conclusion_changes"] and c["ci_low"] <= 0)
+    learned, other = summaries["learned"], summaries[baseline]
+    verdict, paired = final["verdict"], final["verdict"]["paired"]
+    immediate = next(c for c in final["comparisons"] if c["b"] == "immediate")
+    orders = f"{learned['parents']} paired simulated orders over {learned['days']} test days"
+    changed = {n: e for n, e in stress["scenarios"].items() if n != "base" and e["conclusion_changes"]}
+    moved = len(stress["scenarios"]) - 1
+    sparse = final["regimes"]["sparse"]["learned_vs_best_baseline"]
+    fitted_q = summaries["fitted_q"]
     return {
-        "tiles": [
-            {"value": compact(events), "label": "order events replayed"},
-            {"value": f"{learned['parents']:,}", "label": f"paired orders, {learned['days']} test days"},
-            {"value": f"{compact(profile['compiled_book']['events_per_s'])}/s", "label": "events on one core, in C"},
-            {"value": str(fuzz["ledger_divergences"] + fuzz["book_divergences"]), "label": f"divergences in {compact(fuzz['cases'])} fuzz cases"},
+        "about": [
+            "Two simulated traders work the same order on the same simulated market. To rest is to wait in the queue for a better price, and to cross is to pay the spread and fill now.",
+            f"The learned policy uses a fill model to price both choices at every decision, and the urgency rule rests until it falls more than {frozen['urgency_behind_lots']} lots behind an even schedule.",
+            "Playback runs at four times simulated speed and stops wherever one trader rests while the other crosses. Trades land at their recorded times, the book updates once a second as it was recorded, and a negative cost means the fills beat the price at arrival.",
         ],
-        "verdict": {"sentence": verdict_sentence(final["verdict"], frozen["best_baseline"])},
-        "table": {
-            "parents": learned["parents"],
-            "days": learned["days"],
+        "verdict": verdict_sentence(verdict, baseline),
+        "results": [
+            {"name": "Frozen rule", "value": "Passed" if verdict["improved"] else "Did not pass", "scope": f"Learned policy against the urgency rule on {orders}."},
+            {"name": "Mean cost", "value": f"{-paired['mean_diff_bps']:.3f} bps lower", "scope": f"95% interval {-paired['ci_high']:.3f} to {-paired['ci_low']:.3f} bps, resampling whole days, against the urgency rule."},
+            {"name": "Forced lots", "value": f"{learned['forced_lot_pct']:.1f}% against {other['forced_lot_pct']:.1f}%", "scope": "Share of lots finished by the deadline rule, against the urgency rule on the same orders."},
+            {"name": "95th percentile cost", "value": f"{signed(learned['p95_bps'])} against {signed(other['p95_bps'])} bps", "scope": "Against the urgency rule on the same orders."},
+            {"name": "Crossing at once", "value": f"{-immediate['mean_diff_bps']:.2f} bps lower", "scope": f"Mean cost of the learned policy against immediate crossing, 95% interval {-immediate['ci_high']:.2f} to {-immediate['ci_low']:.2f} bps."},
+            {"name": "Replay speed", "value": f"{compact(profile['compiled_book']['events_per_s'])} events per second", "scope": f"The C book on one core, best of {profile['compiled_book']['runs']} runs on a shared machine, {profile['speedup_book']:.1f}x the Python reference."},
+            {"name": "Fuzzing", "value": f"{fuzz['ledger_divergences'] + fuzz['book_divergences']} divergences", "scope": f"C against the Python reference in {fuzz['cases']:,} cases under AddressSanitizer and UBSan."},
+            {"name": "Tests", "value": f"{evidence['tests']} passing", "scope": f"{evidence['engine_coverage_pct']}% line coverage of the engine and {evidence['coverage_pct']}% of the package when the study was recorded."},
+        ],
+        "strategies": {
+            "scope": f"Mean and 95th percentile cost in bps on {orders}, with the share of lots forced at the deadline. Positive numbers are costs.",
             "rows": [
-                {"name": n, "mean": summaries[n]["mean_bps"], "p95": summaries[n]["p95_bps"], "forced": summaries[n]["forced_lot_pct"]}
+                {"name": LABELS[n], "mean": signed(summaries[n]["mean_bps"]), "p95": signed(summaries[n]["p95_bps"]), "forced": f"{summaries[n]['forced_lot_pct']:.1f}%"}
                 for n in order
             ],
-            "note": f"Positive numbers are costs. Forced means lots bought by the deadline rule. Across {len(moved)} moved assumptions, the result reverses in {reversed_} and loses its clear interval in {unclear}.",
         },
-        "checks": [
-            f"{evidence['tests']} tests, with {evidence['engine_coverage_pct']}% line coverage of the engine and {evidence['coverage_pct']}% overall, starting from a hand-worked trace with an assertion for every book state.",
-            f"The compiled C replay matches the Python reference byte for byte, with {fuzz['ledger_divergences'] + fuzz['book_divergences']} divergences in {fuzz['cases']:,} hostile fuzz cases under AddressSanitizer and UBSan.",
-            "Strategies receive only delayed data. A test rewrites the future and requires every earlier view to stay identical.",
-            f"The hypothesis, split and decision rule were committed before any test day was read. The interval resamples whole days, {paired['days']} of them.",
+        "failed": [
+            *[moved_sentence(n, changed[n]) for n in sorted(changed, key=lambda n: (stress["scenarios"][n]["learned_vs_baseline"]["ci_low"] <= 0, n))],
+            f"The other {moved - len(changed)} of {moved} moved assumptions left the conclusion in place.",
+            f"On the {sparse['days']} sparse test days the difference is unclear, at {signed(sparse['mean_diff_bps'], 3)} bps with a 95% interval of {signed(sparse['ci_low'], 3)} to {signed(sparse['ci_high'], 3)}.",
+            f"The fitted Q comparator lost clearly, at {signed(fitted_q['mean_bps'])} bps with {fitted_q['forced_lot_pct']:.1f}% of lots forced, and it had no tuning of its own.",
         ],
         "limits": [
-            "Market impact. The feed is fixed, so a simulated order never moves a price and nobody reacts to it.",
-            "A real venue. The feed is a seeded synthetic market, and its signal strength was set by this project.",
-            "Thin markets. Sparse synthetic days can show spreads of 50 ticks, far wider than normal, so their largest gains and losses are not realistic.",
-            "Queue reality. Fills come from a queue model, so the stress tests show how much the answer depends on it.",
+            "The feed is fixed, so a simulated order never moves a price and nobody reacts to it.",
+            "The feed is a seeded synthetic market whose signal strength was set by this project, so none of this shows what a real venue would pay.",
+            "Sparse synthetic days can show spreads of 50 ticks, far wider than normal, so the largest gains and losses here are not realistic.",
+            "Fills come from a queue model, and the stress tests show how much the answer depends on it.",
         ],
     }
+
+
+def render(payload: dict) -> str:
+    """Fill the template. Fonts are embedded so the page makes no network requests."""
+    html = TEMPLATE.read_text().replace("/*DATA*/null", json.dumps(payload, separators=(",", ":")))
+    for mark, path in FONTS.items():
+        html = html.replace(mark, base64.b64encode(path.read_bytes()).decode())
+    return html
 
 
 def write_demo(study: Study) -> str:
@@ -343,19 +385,8 @@ def write_demo(study: Study) -> str:
     profile = json.loads((RESULTS / "profile.json").read_text())
     fuzz = json.loads((RESULTS / "fuzz.json").read_text())
     evidence = json.loads((RESULTS / "evidence.json").read_text())
-    day = scenes[0]["day"]
-    snapshots = replay_session(load_day(study.plan, day), [], fitted.config)[1]
-    payload = {
-        "scenes": scenes,
-        "baseline": baseline,
-        "ridge": session_ridge(snapshots),
-        "commit": final["manifest"]["commit"],
-        "input_sha256": final["manifest"]["input_sha256"],
-        **page_content(final, frozen, stress, profile, fuzz, evidence, ensure_data(study.plan)["events"]),
-    }
+    payload = {"scenes": scenes, "baseline": baseline, **page_content(final, frozen, stress, profile, fuzz, evidence)}
     (RESULTS / "demo_run.json").write_text(json.dumps(payload, indent=1) + "\n")
-    # The font is embedded so the page still makes no network requests.
-    font = base64.b64encode(FONT.read_bytes()).decode()
-    html = TEMPLATE.read_text().replace("/*FONT*/", font).replace("/*DATA*/null", json.dumps(payload, separators=(",", ":")))
+    html = render(payload)
     OUTPUT.write_text(html)
     return f"Wrote {OUTPUT.relative_to(REPO)}, {len(html) // 1024} KB, {len(scenes)} scenes"

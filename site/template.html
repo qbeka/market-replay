@@ -3,383 +3,854 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>One Order, Two Traders</title>
-<meta name="description" content="A recorded replay of a simulated execution study. Every order is simulated.">
+<title>Market Replay</title>
+<meta name="description" content="The same simulated order filled two ways, on the same simulated market.">
+<link rel="icon" href="data:,">
 <style>
+/* Shared by the project pages. Each page adds its own stage on top of this. */
+
 @font-face {
-  font-family: "Geist Serif";
-  src: url(data:font/woff2;base64,/*FONT*/) format("woff2");
+  font-family: 'Geist Serif';
+  src: url(data:font/woff2;base64,/*GEIST_SERIF*/) format('woff2');
+  font-weight: 400;
   font-display: swap;
 }
-/* Tokens match qendrimbeka.com and kobamoney.com. */
+@font-face {
+  font-family: 'Geist';
+  src: url(data:font/woff2;base64,/*GEIST_REGULAR*/) format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url(data:font/woff2;base64,/*GEIST_MEDIUM*/) format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
-  --ink: #111511; --body: #444944; --muted: #5a5e5a; --quiet: #8d918e;
-  --forest: 29, 58, 42;
-  --line: #11151117; --line-strong: #1115112e;
-  --tile: #6040200e; --tile-2: #60402017;
-  --learned: #0e7350; --baseline: #e39150;
+  --paper: #ffffff;
+  --surface: #fbfaf7;
+  --ink: #111511;
+  --body: #444944;
+  --muted: #535753;
+  --faint: #8d918e;
+  --forest: #1d3a2a;
+  --forest-hover: #2b4f3b;
+  --forest-pressed: #142a1e;
+  --line: #11151117;
+  --line-strong: #1115112e;
+  --wash: #1115110a;
+  --wash-strong: #11151117;
+  --serif: 'Geist Serif', 'Times New Roman', Times, serif;
+  --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --stage-width: 1080px;
+  --reading-width: 680px;
+  --gutter: 24px;
+  --radius-outer: 12px;
+  --radius-control: 7px;
+  --control-height: 36px;
+  --float-shadow: 0 1px 2px #11151112, 0 6px 16px #1115110d;
 }
-* { box-sizing: border-box; }
-b, strong, th { font-weight: 400; }
-html { scroll-behavior: smooth; }
+@media (max-width: 767px) {
+  :root { --gutter: 16px; }
+}
+@media (pointer: coarse) {
+  :root { --control-height: 44px; }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--paper); -webkit-text-size-adjust: 100%; }
 body {
-  margin: 0; background: #fff; color: var(--ink);
-  font: 16px/24px "Geist Serif", Georgia, serif;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 15px/24px var(--sans);
   font-synthesis: none;
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
 ::selection { background: #1d3a2a26; }
-:focus-visible { outline: 2px solid #1d3a2a; outline-offset: 3px; border-radius: 6px; }
-
-#ridge { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-#dusk { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .55;
-  background: linear-gradient(180deg, #fff 0%, #fff 38%, #f6f5f1 58%, #f8efe7 66%, #f3f4f1 74%, #fff 100%); }
-
-.page { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 72px 24px 80px; }
-.eyebrow { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
-h1 { font-size: clamp(2.25rem, 1.6rem + 2.6vw, 3rem); line-height: 1.04; letter-spacing: -0.032em; font-weight: 400; margin: 0; }
-.lede { max-width: 34rem; margin: 12px 0 0; font-size: clamp(1.0625rem, 1rem + .3vw, 1.1875rem); line-height: 1.5; color: var(--body); }
-h2 { font-size: 1.5rem; line-height: 1.15; letter-spacing: -0.028em; font-weight: 400; margin: 0 0 8px; }
-h3 { font-size: 13px; line-height: 20px; font-weight: 400; color: var(--muted); margin: 0 0 6px; }
-section { margin-top: 72px; }
-p.text { font-size: 15.5px; line-height: 1.65; color: var(--body); margin: 0 0 12px; }
-.note { font-size: 13px; line-height: 20px; color: var(--muted); }
-
-.pills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
-.pill { display: inline-flex; height: 44px; align-items: center; justify-content: center; padding: 0 20px; border-radius: 999px;
-  font: inherit; font-size: 15px; font-weight: 400; letter-spacing: -0.012em; cursor: pointer; text-decoration: none; transition: background-color .15s; }
-.pill.dark { background: #121412; color: #fff; border: 1px solid #ffffff26; box-shadow: 0 1px 2px #0000002e; }
-.pill.dark:hover { background: #2a2d2a; }
-.pill.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); }
-.pill.ghost:hover { background: #f7f6f4; }
-.pill.small { height: 32px; padding: 0 12px; font-size: 13px; }
-.pill[aria-pressed="true"] { background: #121412; color: #fff; border-color: #121412; }
-
-.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 40px 0 0; }
-.tile { background: var(--tile); border-radius: 18px; padding: 14px 16px; }
-.tile b { display: block; font-size: 1.5rem; line-height: 1; font-weight: 400; letter-spacing: -0.028em; font-variant-numeric: tabular-nums; }
-.tile span { display: block; margin-top: 6px; font-size: 13px; line-height: 18px; color: var(--muted); }
-
-.simulated { display: flex; gap: 12px; margin-top: 24px; font-size: 14px; line-height: 21px; color: var(--body); }
-.dash { flex: none; width: 12px; height: 1px; margin-top: 10px; background: var(--quiet); }
-
-.card { background: #ffffffd9; border: 1px solid var(--line); border-radius: 28px; padding: 24px; margin-top: 16px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
-.scenes { display: flex; flex-wrap: wrap; gap: 8px; }
-svg.chart { display: block; width: 100%; height: auto; touch-action: pan-y; cursor: crosshair; }
-.axis { fill: var(--quiet); font-size: 11px; font-variant-numeric: tabular-nums; }
-.player { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
-input[type=range] { flex: 1; min-width: 80px; height: 24px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
-input[type=range]::-webkit-slider-runnable-track { height: 1px; background: var(--line-strong); }
-input[type=range]::-moz-range-track { height: 1px; background: var(--line-strong); }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; margin-top: -6px; border-radius: 50%; background: #121412; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line-strong); }
-input[type=range]::-moz-range-thumb { width: 9px; height: 9px; border-radius: 50%; background: #121412; border: 2px solid #fff; }
-.clock { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.who { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
-.person { background: var(--tile); border-radius: 18px; padding: 12px 14px; min-width: 0; }
-.person .name { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
-.swatch { flex: none; width: 18px; height: 0; border-top: 2px solid; }
-.swatch.dashed { border-top-style: dashed; }
-.person b { display: block; margin-top: 6px; font-size: 1.25rem; line-height: 1.1; letter-spacing: -0.02em; font-weight: 400; font-variant-numeric: tabular-nums; }
-.person span.sub { display: block; margin-top: 4px; font-size: 13px; line-height: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 24px; margin-top: 24px; }
-
-.ladder { width: 100%; font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; }
-.rung { display: grid; grid-template-columns: 44px 1fr 28px; gap: 8px; align-items: center; height: 22px; color: var(--muted); }
-.rung .depth { position: relative; height: 1px; background: transparent; }
-.rung .depth i { position: absolute; left: 0; top: 0; height: 1px; background: rgba(var(--forest), .55); }
-.rung.ask .depth i { background: rgba(var(--forest), .28); }
-.rung .mark { position: absolute; top: -4px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #fff; }
-.rung .num { text-align: right; }
-.spread { height: 1px; margin: 3px 0; background: var(--line-strong); }
-
-.rows { border-top: 1px solid var(--line); margin-top: 8px; }
-.row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 72px 72px; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14.5px; line-height: 22px; color: var(--body); font-variant-numeric: tabular-nums; }
-.row .n { text-align: right; }
-.row.head { color: var(--muted); font-size: 13px; }
-.row.us { color: var(--ink); font-weight: 400; }
-ul.dashes { list-style: none; margin: 12px 0 0; padding: 0; }
-ul.dashes li { display: flex; gap: 12px; font-size: 15px; line-height: 1.55; color: var(--body); margin-top: 6px; }
-ul.dashes li::before { content: ""; flex: none; width: 12px; height: 1px; margin-top: .75em; background: var(--quiet); }
-
-.trace { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px; }
-.log { max-height: 252px; overflow: auto; border-top: 1px solid var(--line); font-size: 13px; line-height: 19px; scrollbar-width: thin; }
-.log div { display: grid; grid-template-columns: 52px 1fr; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line); color: var(--quiet); font-variant-numeric: tabular-nums; }
-.log div.past { color: var(--body); }
-footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; line-height: 20px; color: var(--quiet); overflow-wrap: anywhere; }
-
-@media (max-width: 640px) {
-  .page { padding: 48px 16px 64px; }
-  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .split, .trace { grid-template-columns: 1fr; }
-  .card { padding: 16px; border-radius: 18px; }
-  .row { grid-template-columns: minmax(0, 1fr) 54px 54px 54px; gap: 8px; font-size: 13.5px; }
+[hidden] { display: none !important; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
 }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* Page frame */
+.shell { width: 100%; max-width: calc(var(--stage-width) + var(--gutter) * 2); margin: 0 auto; padding: 0 var(--gutter); }
+.topbar { display: flex; align-items: center; justify-content: space-between; height: 52px; }
+.topbar nav { display: flex; align-items: center; gap: 4px; margin-right: -8px; }
+.title { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: 16px; margin-bottom: 16px; }
+.title h1 { margin: 0; font: 400 40px/44px var(--serif); letter-spacing: -0.03em; }
+.title p { grid-column: 1 / -1; margin: 2px 0 0; font: 400 17px/24px var(--serif); color: var(--body); letter-spacing: -0.008em; }
+
+/* Links */
+.quiet {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 8px;
+  border-radius: var(--radius-control); color: var(--muted); font-size: 14px; line-height: 20px;
+  text-decoration: none; transition: color .12s;
+}
+.quiet:active { color: var(--ink); }
+.back { margin-left: -8px; }
+.back svg { flex: none; }
+.prose a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+.prose a:active { text-decoration-color: currentColor; }
+@media (hover: hover) {
+  .quiet:hover { color: var(--ink); }
+  .prose a:hover { text-decoration-color: currentColor; }
+}
+
+/* One focus ring for everything */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
+
+/* Controls. Every state is written out, so that no two can combine by accident. */
+.control {
+  appearance: none; display: inline-flex; align-items: center; justify-content: center;
+  min-height: var(--control-height); padding: 0 11px; margin: 0;
+  border: 1px solid transparent; border-radius: var(--radius-control);
+  background: transparent; color: var(--ink);
+  font: 400 13px/16px var(--sans); letter-spacing: -0.003em; white-space: nowrap; text-decoration: none;
+  cursor: pointer; user-select: none; -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  transition: background-color .12s, color .12s, border-color .12s;
+}
+.control:active { background: var(--wash-strong); }
+@media (hover: hover) {
+  .control:hover { background: var(--wash); }
+  .control:active { background: var(--wash-strong); }
+}
+
+.control[aria-pressed='true'] { background: var(--forest); color: #fff; font-weight: 500; }
+.control[aria-pressed='true']:active { background: var(--forest-pressed); }
+@media (hover: hover) {
+  .control[aria-pressed='true']:hover { background: var(--forest-hover); color: #fff; }
+  .control[aria-pressed='true']:active { background: var(--forest-pressed); color: #fff; }
+}
+
+.control.outline { border-color: var(--line-strong); background: var(--paper); }
+.control.outline:active { background: var(--wash-strong); }
+@media (hover: hover) {
+  .control.outline:hover { background: var(--surface); border-color: #11151147; }
+  .control.outline:active { background: var(--wash-strong); }
+}
+
+.control.primary { background: var(--ink); color: #fff; font-weight: 500; padding: 0 14px; }
+.control.primary:active { background: #000; }
+@media (hover: hover) {
+  .control.primary:hover { background: #2a2d2a; color: #fff; }
+  .control.primary:active { background: #000; color: #fff; }
+}
+
+/* Disabled stays focusable, so that a key press never drops focus. */
+.control[aria-disabled='true'],
+.control[aria-disabled='true']:active { background: transparent; color: var(--faint); cursor: default; }
+@media (hover: hover) {
+  .control[aria-disabled='true']:hover,
+  .control[aria-disabled='true']:active { background: transparent; color: var(--faint); }
+}
+.control.primary[aria-busy='true'],
+.control.primary[aria-busy='true']:active { background: #2a2d2a; color: #ffffffd9; cursor: progress; }
+@media (hover: hover) {
+  .control.primary[aria-busy='true']:hover,
+  .control.primary[aria-busy='true']:active { background: #2a2d2a; color: #ffffffd9; }
+}
+
+/* The demo has one boundary. Anything inside it uses hairlines. */
+.stage {
+  position: relative; overflow: hidden; isolation: isolate;
+  width: 100%; height: var(--stage-height, 620px);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-outer);
+  background: var(--surface); container-type: inline-size;
+}
+.float {
+  background: var(--paper); border: 1px solid var(--line-strong);
+  border-radius: 10px; box-shadow: var(--float-shadow);
+}
+.divider { flex: none; align-self: stretch; width: 1px; margin: 6px 3px; background: var(--line); }
+
+/* The reading column under the stage */
+.reading { max-width: var(--reading-width); margin: 72px 0 0; scroll-margin-top: 32px; }
+.reading h2 { margin: 0 0 12px; font: 400 26px/32px var(--serif); letter-spacing: -0.02em; }
+.reading h3 { margin: 44px 0 10px; font: 500 13px/20px var(--sans); color: var(--ink); }
+.prose { margin: 0 0 12px; font: 400 17px/27px var(--serif); color: var(--body); letter-spacing: -0.005em; }
+.results { margin: 0; border-top: 1px solid var(--line); }
+.results > div {
+  display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); column-gap: 20px;
+  padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+.results dt { font-size: 14px; line-height: 22px; color: var(--muted); }
+.results dd { margin: 0; font-size: 14px; line-height: 22px; color: var(--body); }
+.results b { display: block; font-weight: 500; color: var(--ink); }
+.limits { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.limits li { padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 22px; color: var(--body); }
+.page-end {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  max-width: var(--reading-width); margin: 56px 0 0; padding: 0 0 40px;
+}
+.page-end .quiet:last-child { margin-right: -8px; }
+@media (max-width: 559px) {
+  .results > div { grid-template-columns: minmax(0, 1fr); row-gap: 2px; }
+}
+
+
+/* Market Replay */
+:root { --stage-height: clamp(470px, calc(100svh - 162px), 640px); --flank: minmax(0, 1fr); --spine: minmax(300px, 400px); --urgency: #535753; }
+.stage { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; }
+
+.head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; border-bottom: 1px solid var(--line); }
+.seg { display: flex; gap: 2px; min-width: 0; }
+.strip { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; min-height: 40px; padding: 9px 16px; border-bottom: 1px solid var(--line); }
+.strip p { margin: 0; font-size: 13px; line-height: 20px; }
+#order { flex: none; color: var(--ink); font-weight: 500; }
+#caption { min-width: 0; color: var(--muted); text-align: right; }
+#caption[data-strong] { color: var(--ink); }
+
+.body { position: relative; min-height: 0; }
+.view { position: absolute; inset: 0; }
+
+/* Replay: one market between two traders */
+.replay { display: grid; grid-template-columns: var(--flank) var(--spine) var(--flank); }
+.flank { display: flex; flex-direction: column; min-width: 0; padding: 20px 24px 20px; }
+.who { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; line-height: 20px; color: var(--muted); }
+.who svg { flex: none; }
+.verb { margin: 6px 0 0; font-size: 26px; line-height: 32px; font-weight: 500; letter-spacing: -0.02em; color: var(--muted); }
+.flank[data-split] .verb { color: var(--ink); }
+.why { min-height: 40px; margin: 6px 0 0; font-size: 13px; line-height: 20px; color: var(--muted); }
+.said { min-height: 57px; margin: 14px 0 0; padding-top: 14px; border-top: 1px solid var(--line); font-size: 14px; line-height: 21px; color: var(--ink); }
+.meters { margin: auto 0 0; display: grid; gap: 14px; }
+.meter { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; row-gap: 6px; margin: 0; }
+.meter dt { font-size: 13px; line-height: 20px; color: var(--muted); }
+.meter dd { margin: 0; font-size: 15px; line-height: 20px; font-weight: 500; color: var(--ink); }
+.meter .bar { grid-column: 1 / -1; position: relative; height: 2px; background: var(--line); }
+.bar i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--forest); }
+.flank[data-i='1'] .bar i { background: var(--urgency); }
+.bar b { position: absolute; top: -3px; width: 1px; height: 8px; background: var(--line-strong); }
+
+.spine { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; background: var(--paper); border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+.quote { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: 13px; line-height: 20px; color: var(--muted); }
+.quote span:nth-child(2) { text-align: center; }
+.quote span:nth-child(3) { text-align: right; }
+.quote b { font-weight: 500; color: var(--ink); }
+.plot { display: block; width: 100%; height: 100%; min-height: 0; overflow: hidden; }
+.plot text { font: 400 11px/1 var(--sans); fill: var(--muted); font-variant-numeric: tabular-nums; }
+.plot .halo { paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
+
+/* Overview: the whole order */
+.overview { display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 10px 16px 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: 12px; line-height: 18px; color: var(--muted); }
+.legend li { display: flex; align-items: center; gap: 6px; }
+.chart { position: relative; min-height: 0; touch-action: pan-y; cursor: col-resize; }
+.chart svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.later { opacity: .25; }
+.playhead { position: absolute; top: 0; left: 0; width: 1px; background: var(--ink); will-change: transform; pointer-events: none; }
+
+/* Events: the raw log */
+.events { overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; background: var(--paper); }
+.events:focus-visible { outline-offset: -2px; }
+.log { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; line-height: 18px; }
+.log th { position: sticky; top: 0; z-index: 1; padding: 7px 8px; background: var(--paper); box-shadow: 0 1px 0 var(--line); text-align: left; font-weight: 500; color: var(--ink); }
+.log td { padding: 3px 8px; border-bottom: 1px solid var(--line); color: var(--faint); overflow-wrap: anywhere; vertical-align: top; }
+.log .time { width: 76px; padding-left: 16px; }
+.log tr.past td { color: var(--body); }
+.log tr.past td.differs { color: var(--ink); }
+.log tr.current td { background: var(--wash); }
+
+/* Transport */
+.transport { display: flex; align-items: center; gap: 4px; padding: 8px; border-top: 1px solid var(--line); background: var(--surface); }
+.labels { display: grid; justify-items: center; }
+.labels > span { grid-area: 1 / 1; visibility: hidden; }
+.labels > span.on { visibility: visible; }
+.control.icon { width: var(--control-height); padding: 0; }
+.scrub { position: relative; flex: 1; min-width: 60px; height: var(--control-height); margin: 0 10px; }
+.scrub input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; background: transparent; opacity: 0; cursor: pointer; touch-action: pan-y; -webkit-appearance: none; appearance: none; }
+.scrub input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; }
+.scrub input::-moz-range-thumb { width: 14px; height: 14px; border: 0; }
+.track, .done { position: absolute; top: 50%; left: 0; right: 0; height: 1px; margin-top: -.5px; background: var(--line-strong); pointer-events: none; }
+.done { height: 2px; margin-top: -1px; background: var(--ink); transform-origin: left; transform: scaleX(0); will-change: transform; }
+.tick { position: absolute; top: 50%; width: 2px; height: 10px; margin: -5px 0 0 -1px; background: var(--forest); pointer-events: none; }
+.thumb { position: absolute; top: 50%; left: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid var(--surface); border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 1px var(--line-strong); pointer-events: none; will-change: transform; transition: background-color .12s; }
+.scrub input:active ~ .thumb { background: #000; box-shadow: 0 0 0 4px var(--wash-strong); }
+.scrub input:focus-visible ~ .thumb { box-shadow: 0 0 0 2px var(--forest); }
+@media (hover: hover) {
+  .scrub:hover .thumb { background: #2a2d2a; box-shadow: 0 0 0 3px var(--wash-strong); }
+  .scrub:hover input:active ~ .thumb { background: #000; box-shadow: 0 0 0 4px var(--wash-strong); }
+  .scrub:hover input:focus-visible ~ .thumb { box-shadow: 0 0 0 2px var(--forest); }
+}
+.clock { flex: none; min-width: 84px; font-size: 13px; line-height: 20px; color: var(--ink); text-align: right; contain: content; }
+.sim { flex: none; padding: 0 8px 0 12px; font-size: 13px; line-height: 20px; color: var(--muted); }
+
+.page-end { margin-top: 56px; }
+.strategies { margin: 0; border-top: 1px solid var(--line); }
+.strategies > div { display: grid; grid-template-columns: minmax(0, 1fr) 72px 72px 64px; column-gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 22px; color: var(--body); }
+.strategies > div > span:not(:first-child) { text-align: right; }
+.strategies > div:first-child { font-size: 13px; color: var(--muted); }
+.strategies > div[data-us] { color: var(--ink); }
+.scope { margin: 0 0 10px; font-size: 14px; line-height: 22px; color: var(--muted); }
+
+@media (max-width: 1023px) {
+  :root { --spine: minmax(240px, 280px); }
+  .flank { padding: 16px; }
+  .verb { font-size: 22px; line-height: 28px; }
+  #caption { flex: 1; }
+}
+@media (max-width: 767px) {
+  :root { --stage-height: clamp(430px, calc(100svh - 128px), 640px); }
+  .title { margin-bottom: 12px; }
+  .title h1 { font-size: 32px; line-height: 36px; }
+  .title p { font-size: 15px; line-height: 22px; }
+  .head { flex-direction: column; align-items: stretch; gap: 2px; padding: 4px; }
+  .seg .control { flex: 1 1 auto; padding: 0 6px; }
+  .strip { flex-direction: column; gap: 0; min-height: 0; padding: 7px 12px; }
+  #caption { text-align: left; min-height: 40px; }
+  .replay { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .flank { padding: 10px 12px; }
+  .flank[data-i='1'] { border-left: 1px solid var(--line); }
+  .verb { margin-top: 2px; font-size: 19px; line-height: 24px; }
+  .why { min-height: 0; margin-top: 2px; font-size: 12px; line-height: 16px; }
+  .said { min-height: 0; margin-top: 6px; padding-top: 6px; font-size: 12px; line-height: 16px; }
+  .meters { margin-top: 8px; gap: 6px; }
+  .meter { row-gap: 3px; }
+  .meter dt { font-size: 12px; line-height: 16px; white-space: nowrap; }
+  .meter dd { font-size: 13px; line-height: 16px; white-space: nowrap; }
+  .spine { grid-column: 1 / -1; grid-row: 2; border: 0; border-top: 1px solid var(--line); }
+  .quote { padding: 4px 12px; font-size: 12px; line-height: 16px; }
+  .transport { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 4px; row-gap: 0; padding: 4px 8px 6px; }
+  #prev, #next { display: none; }
+  .scrub { grid-column: 2 / -1; margin: 0 4px 0 10px; }
+  .clock { grid-column: 1 / 3; min-width: 0; text-align: left; font-size: 12px; line-height: 16px; }
+  .sim { padding: 0; font-size: 12px; line-height: 16px; }
+  .overview { padding: 6px 12px; }
+  .log .time { width: 52px; padding-left: 8px; }
+  .log td, .log th { padding-left: 4px; padding-right: 4px; font-size: 11px; line-height: 15px; }
+  .strategies > div { grid-template-columns: minmax(0, 1fr) 56px 56px 48px; column-gap: 8px; font-size: 13px; }
+}
+@media (max-width: 359px) {
+  .meter dt { font-size: 11px; }
+  .meter dd { font-size: 12px; }
+}
+@media (max-width: 767px) and (max-height: 720px) {
+  .why { display: none; }
+  .replay { grid-template-rows: minmax(0, 1fr); }
+  .spine { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
 </style>
 </head>
 <body>
-<div id="dusk" aria-hidden="true"></div>
-<svg id="ridge" aria-hidden="true" preserveAspectRatio="none"></svg>
-<div class="page">
-  <header>
-    <p class="eyebrow">Research project. Every order is simulated.</p>
-    <h1>One order, two traders</h1>
-    <p class="lede">A small order has one minute to finish. Should it rest in the queue, cross the spread, or wait? Watch two simulated traders answer that on the same recorded market.</p>
-    <div class="pills">
-      <button class="pill dark" id="hero-play">Play the replay</button>
-      <a class="pill ghost" href="#evidence">See the evidence</a>
-    </div>
-    <div class="tiles" id="tiles"></div>
-    <div class="simulated"><i class="dash"></i><span>Nothing here traded. The market is a seeded synthetic feed, so these results show that the method works, not that it would earn anything on a real venue. The hairline behind this page is that feed's midpoint for one session.</span></div>
+<div class="shell">
+  <header class="topbar">
+    <a class="quiet back" href="https://www.qendrimbeka.com/">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 4L6 8L10 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Back
+    </a>
+    <nav aria-label="More about Market Replay">
+      <a class="quiet" href="#details">Details</a>
+      <a class="quiet" href="https://github.com/qbeka/market-replay">GitHub</a>
+    </nav>
   </header>
-
   <main>
-    <section id="replay" aria-labelledby="replay-title">
-      <div class="bar"><h2 id="replay-title">The replay</h2><div class="scenes" id="scenes"></div></div>
-      <p class="note" id="scene-rule"></p>
-      <div class="card">
-        <h3>Price in ticks. Fills land on the recorded market.</h3>
-        <svg class="chart" id="market" viewBox="0 0 640 240" role="img" aria-label="Midpoint and best quotes over the order's life, with each trader's fills marked"></svg>
-        <div class="player">
-          <button class="pill dark small" id="play">Play</button>
-          <input id="time" type="range" min="0" max="60" step="1" value="0" aria-label="Seconds since the order arrived">
-          <span class="clock" id="clock"></span>
-        </div>
-        <div class="who" id="who"></div>
-        <div class="split">
-          <div>
-            <h3>Order book at this moment</h3>
-            <div class="ladder" id="ladder"></div>
-          </div>
-          <div>
-            <h3>Lots left to trade</h3>
-            <svg class="chart" id="inventory" viewBox="0 0 400 104" role="img" aria-label="Lots left over time for both traders"></svg>
-            <h3 style="margin-top:14px">Cost so far, in basis points of the order</h3>
-            <svg class="chart" id="cost" viewBox="0 0 400 104" role="img" aria-label="Running cost over time for both traders"></svg>
-          </div>
+    <header class="title">
+      <h1>Market Replay</h1>
+      <p>The same order filled two ways</p>
+    </header>
+    <section class="stage" aria-label="Replay of one simulated order">
+      <div class="head">
+        <div class="seg" id="scenes" role="group" aria-label="Which order"></div>
+        <div class="seg" id="modes" role="group" aria-label="View">
+          <button class="control" type="button" data-mode="replay" aria-pressed="true">Replay</button>
+          <button class="control" type="button" data-mode="overview" aria-pressed="false">Overview</button>
+          <button class="control" type="button" data-mode="events" aria-pressed="false">Events</button>
         </div>
       </div>
-      <div class="trace" id="logs"></div>
+      <div class="strip"><p id="order"></p><p id="caption"></p></div>
+      <div class="body">
+        <div class="view replay" id="view-replay">
+          <article class="flank" data-i="0"></article>
+          <div class="spine">
+            <div class="quote"><span>Bid <b id="bid"></b></span><span>Spread <b id="spread"></b></span><span>Ask <b id="ask"></b></span></div>
+            <svg class="plot" id="spine" role="img" aria-label="The order book now, with each trader's order marked at its price"></svg>
+          </div>
+          <article class="flank" data-i="1"></article>
+        </div>
+        <div class="view overview" id="view-overview" hidden>
+          <ul class="legend">
+            <li><svg width="22" height="8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="#1d3a2a" stroke-width="1.5"/></svg>Learned policy</li>
+            <li><svg width="22" height="8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="#535753" stroke-width="1.5" stroke-dasharray="4 3"/></svg>Urgency rule</li>
+            <li><svg width="10" height="10" aria-hidden="true"><circle cx="5" cy="5" r="3.5" fill="#535753"/></svg>Crossed</li>
+            <li><svg width="10" height="10" aria-hidden="true"><circle cx="5" cy="5" r="3.5" fill="#fff" stroke="#535753"/></svg>Rested</li>
+          </ul>
+          <div class="chart" id="chart"><svg id="path" role="img" aria-label="The full market path with both traders' fills, cost and lots left"></svg><div class="playhead" id="playhead"></div></div>
+        </div>
+        <div class="view events" id="view-events" tabindex="0" role="region" aria-label="Raw event log" hidden></div>
+      </div>
+      <div class="transport">
+        <button class="control primary" id="play" type="button"><span class="labels"><span data-l="play" class="on">Play</span><span data-l="pause">Pause</span><span data-l="continue">Continue</span><span data-l="replay">Replay</span><span data-l="next">Next</span></span></button>
+        <button class="control icon" id="prev" type="button" aria-label="Previous decision"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 4L6 8L10 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="control icon" id="next" type="button" aria-label="Next decision"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="scrub" id="scrub">
+          <i class="track"></i><i class="done" id="done"></i><span id="ticks"></span>
+          <input id="time" type="range" min="0" max="60" step="0.001" value="0" aria-label="Seconds since the order arrived">
+          <i class="thumb" id="thumb"></i>
+        </div>
+        <span class="clock" id="clock"></span>
+        <span class="sim">Simulated</span>
+      </div>
+      <div class="sr-only" role="status" id="status"></div>
     </section>
-
-    <section id="evidence" aria-labelledby="evidence-title">
-      <h2 id="evidence-title">The evidence</h2>
-      <p class="text" id="verdict"></p>
-      <div class="rows" id="table"></div>
-      <p class="note" style="margin-top:10px" id="table-note"></p>
+    <section class="reading" id="details" aria-labelledby="details-title">
+      <h2 id="details-title">Details</h2>
+      <div id="about"></div>
+      <p class="prose" id="verdict"></p>
+      <h3>Results</h3>
+      <dl class="results" id="results"></dl>
+      <h3>All strategies</h3>
+      <p class="scope" id="strategies-scope"></p>
+      <div class="strategies" id="strategies"></div>
+      <h3>Where it failed</h3>
+      <ul class="limits" id="failed"></ul>
+      <h3>Limits</h3>
+      <ul class="limits" id="limits"></ul>
+      <h3>Method</h3>
+      <p class="prose">The hypothesis, split and decision rule were committed before any test day was read, and the <a href="https://github.com/qbeka/market-replay/blob/main/docs/report.md">report</a> has the full method.</p>
     </section>
-
-    <section aria-labelledby="checks-title">
-      <h2 id="checks-title">How it was checked</h2>
-      <ul class="dashes" id="checks"></ul>
-    </section>
-
-    <section aria-labelledby="limits-title">
-      <h2 id="limits-title">What this cannot tell you</h2>
-      <ul class="dashes" id="limits"></ul>
-    </section>
+    <footer class="page-end">
+      <a class="quiet back" href="https://www.qendrimbeka.com/">Back</a>
+      <a class="quiet" href="https://github.com/qbeka/market-replay">GitHub</a>
+    </footer>
   </main>
-  <footer id="foot"></footer>
 </div>
 <script>
 const DATA = /*DATA*/null;
-const LABELS = {learned: "Learned policy", immediate: "Immediate cross", equal_time: "Equal time", volume_schedule: "Volume schedule", passive_only: "Passive only", urgency: "Urgency rule", fitted_q: "Fitted Q", hv_random: "Random", oracle_volume: "Oracle schedule"};
-const label = n => LABELS[n] || n;
+const RATE = 4; // Simulated seconds per second of playback.
 const $ = id => document.getElementById(id);
-const COLORS = ["var(--learned)", "var(--baseline)"];
-const DASHES = ["", "5 4"];
-let sceneIndex = 0, now = 0, timer = null;
-const scene = () => DATA.scenes[sceneIndex];
-const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const signed = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2);
+const SVG = 'http://www.w3.org/2000/svg';
+const el = (name, attrs = {}, parent) => {
+  const node = document.createElementNS(SVG, name);
+  for (const k in attrs) node.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(node);
+  return node;
+};
+const INK = ['#1d3a2a', '#535753'];
+const DASH = ['', '4 3'];
+const motion = matchMedia('(prefers-reduced-motion: reduce)');
+const signed = (v, places = 2) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(places);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const WORD = {REST: 'Rest', CROSS: 'Cross', WAIT: 'Wait', HOLD: 'Hold'};
 
-/* The hairline behind the page: one session's real midpoint, with fading contours below it. */
-function drawRidge() {
-  const svg = $("ridge"), w = innerWidth, h = innerHeight, mids = DATA.ridge;
-  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-  const lo = Math.min(...mids), hi = Math.max(...mids), n = mids.length - 1;
-  const horizon = h * 0.62, rise = h * 0.3;
-  const path = (lift, scale) => mids.map((m, i) => `${i ? "L" : "M"}${(i / n * w).toFixed(1)} ${(horizon + lift - (m - lo) / (hi - lo || 1) * rise * scale).toFixed(1)}`).join("");
-  let out = "";
-  const contours = [[0, 1, .3], [16, .9, .13], [36, .76, .09], [60, .6, .065], [88, .44, .05], [120, .28, .04], [156, .14, .03], [198, .05, .025]];
-  contours.forEach(([lift, scale, alpha], i) => {
-    out += `<path class="c" d="${path(lift, scale)}" fill="none" stroke="rgba(29,58,42,${alpha})" stroke-width=".75" vector-effect="non-scaling-stroke" style="--d:${i * 120}ms"/>`;
-  });
-  svg.innerHTML = out;
-  if (reduceMotion) return;
-  svg.querySelectorAll("path").forEach(p => {
-    const length = p.getTotalLength();
-    p.style.strokeDasharray = length;
-    p.animate([{strokeDashoffset: length}, {strokeDashoffset: 0}], {duration: 2600, delay: parseFloat(p.style.getPropertyValue("--d")), easing: "cubic-bezier(.4,0,.2,1)", fill: "both"});
-  });
+const state = {scene: 0, mode: 'replay', now: 0, running: false, anchorWall: 0, anchorSim: 0, raf: 0, follow: true, stopped: null};
+const scene = () => DATA.scenes[state.scene];
+
+/* The last index whose time has been reached, so state changes only at recorded times. */
+function indexAt(rows, t) {
+  let lo = 0, hi = rows.length - 1, found = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (rows[mid].t <= t) { found = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  return found;
 }
 
-// The hairline belongs to the opening. It fades back so tables stay easy to read.
-addEventListener("scroll", () => { $("ridge").style.opacity = Math.max(.25, 1 - scrollY / 800); }, {passive: true});
+/* One scale for each quantity across both traders, fixed for the whole order. */
+const scaled = new Map();
+function scales(s) {
+  if (scaled.has(s)) return scaled.get(s);
+  const fills = s.policies.flatMap(p => p.fills);
+  const prices = s.book.flatMap(r => [r.bid, r.ask]).concat(fills.map(f => f.price), [s.arrival_mid]);
+  const low = Math.min(...prices), high = Math.max(...prices), pad = Math.max(2, (high - low) * .06);
+  const costs = s.policies.flatMap(p => p.frames.map(f => f.cost)).concat([0]);
+  const sc = {
+    lo: low - pad, hi: high + pad,
+    size: Math.max(...s.book.flatMap(r => r.bids.concat(r.asks).map(l => l[1]))),
+    costLo: Math.min(...costs), costHi: Math.max(...costs),
+  };
+  scaled.set(s, sc);
+  return sc;
+}
 
+/* Replay */
+const flanks = [...document.querySelectorAll('.flank')].map((root, i) => {
+  root.innerHTML = `<p class="who"><svg width="22" height="8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="${INK[i]}" stroke-width="1.5" stroke-dasharray="${DASH[i]}"/></svg><span></span></p>
+    <p class="verb"></p><p class="why"></p><p class="said"></p>
+    <dl class="meters">
+      <div class="meter"><dt>Lots left</dt><dd data-v="left"></dd><div class="bar"><i data-b="left"></i></div></div>
+      <div class="meter"><dt>Cost so far</dt><dd data-v="cost"></dd><div class="bar"><b data-z></b><i data-b="cost"></i></div></div>
+    </dl>`;
+  return {root, name: root.querySelector('.who span'), verb: root.querySelector('.verb'), why: root.querySelector('.why'), said: root.querySelector('.said'),
+    left: root.querySelector('[data-v=left]'), cost: root.querySelector('[data-v=cost]'), leftBar: root.querySelector('[data-b=left]'), costBar: root.querySelector('[data-b=cost]'), zero: root.querySelector('[data-z]')};
+});
+
+const spine = {svg: $('spine'), w: 0, h: 0};
+function layoutSpine() {
+  const box = spine.svg.getBoundingClientRect();
+  if (!box.width || !box.height) return false;
+  const s = scene(), sc = scales(s), w = spine.w = Math.round(box.width), h = spine.h = Math.round(box.height), pad = 28;
+  spine.y = p => pad + (sc.hi - p) / (sc.hi - sc.lo) * (h - pad * 2);
+  spine.tick = (h - pad * 2) / (sc.hi - sc.lo);
+  spine.half = w / 2 - 34;
+  spine.sc = sc;
+  const svg = spine.svg;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.textContent = '';
+  el('text', {x: w / 2, y: 14, 'text-anchor': 'middle'}, svg).textContent = 'Asks';
+  el('text', {x: w / 2, y: h - 7, 'text-anchor': 'middle'}, svg).textContent = 'Bids';
+  spine.bars = [];
+  for (let i = 0; i < 10; i++) spine.bars.push(el('rect', {fill: i < 5 ? '#11151124' : '#1d3a2a33', rx: 1}, svg));
+  const ay = Math.round(spine.y(s.arrival_mid)) + .5;
+  el('line', {x1: 0, x2: w, y1: ay, y2: ay, stroke: '#8d918e', 'stroke-dasharray': '1 3'}, svg);
+  spine.arrivalY = ay;
+  spine.arrival = el('text', {x: w - 8, y: ay - 5, 'text-anchor': 'end', class: 'halo'}, svg);
+  spine.arrival.textContent = `Arrival ${s.arrival_mid}`;
+  spine.marks = [0, 1].map(i => ({
+    line: el('line', {stroke: INK[i], 'stroke-width': 1, 'stroke-dasharray': DASH[i]}, svg),
+    node: i ? el('rect', {width: 8, height: 8, stroke: INK[i], 'stroke-width': 1.5}, svg) : el('circle', {r: 4.5, stroke: INK[i], 'stroke-width': 1.5}, svg),
+    text: el('text', {class: 'halo', 'text-anchor': i ? 'end' : 'start', style: `fill:${INK[i]}`}, svg),
+  }));
+  shown.book = shown.frames[0] = shown.frames[1] = -2;
+  return true;
+}
+
+function drawBook(row) {
+  const levels = [...row.asks.slice(0, 5), ...row.bids.slice(0, 5)];
+  const {y, tick, half, sc, w} = spine, height = clamp(tick - 2, 2, 10);
+  spine.bars.forEach((bar, i) => {
+    const level = levels[i];
+    if (!level || level[0] < sc.lo || level[0] > sc.hi) return bar.setAttribute('width', 0);
+    const width = Math.max(3, level[1] / sc.size * half * 2);
+    bar.setAttribute('x', (w / 2 - width / 2).toFixed(1));
+    bar.setAttribute('y', (y(level[0]) - height / 2).toFixed(1));
+    bar.setAttribute('width', width.toFixed(1));
+    bar.setAttribute('height', height);
+  });
+  $('bid').textContent = row.bid;
+  $('ask').textContent = row.ask;
+  $('spread').textContent = row.ask - row.bid;
+}
+
+function drawMark(i, frame) {
+  const mark = spine.marks[i], price = frame ? frame.rest ?? frame.hit : null, shows = price !== null && price !== undefined;
+  for (const part of [mark.line, mark.node, mark.text]) part.style.display = shows ? '' : 'none';
+  if (i && !shows) spine.arrival.style.display = '';
+  if (!shows) return;
+  const {w, y} = spine, gap = 22, cy = Math.round(y(price)) + .5, outer = i ? w : 0, inner = i ? w / 2 + gap : w / 2 - gap;
+  const solid = frame.rest === null || frame.rest === undefined;
+  mark.line.setAttribute('x1', outer); mark.line.setAttribute('x2', inner);
+  mark.line.setAttribute('y1', cy); mark.line.setAttribute('y2', cy);
+  mark.node.setAttribute('fill', solid ? INK[i] : '#fff');
+  if (i) { mark.node.setAttribute('x', inner - 4); mark.node.setAttribute('y', cy - 4); mark.node.setAttribute('transform', `rotate(45 ${inner} ${cy})`); }
+  else { mark.node.setAttribute('cx', inner); mark.node.setAttribute('cy', cy); }
+  mark.text.setAttribute('x', i ? w - 8 : 8);
+  mark.text.setAttribute('y', cy < 18 ? cy + 14 : cy - 5);
+  mark.text.textContent = price;
+  if (i) spine.arrival.style.display = Math.abs(cy - spine.arrivalY) < 16 ? 'none' : '';
+}
+
+function drawFlank(i, frame, split) {
+  const s = scene(), f = flanks[i], sc = scales(s), row = frame || {action: null};
+  const text = row.action === 'DONE' ? 'Finished' : row.action ? `${WORD[row.action] || row.action}${row.lots ? ` ${row.lots} lots` : ''}` : 'Waiting';
+  if (f.verb.textContent !== text) f.verb.textContent = text;
+  if (f.why.textContent !== (row.why || '')) f.why.textContent = row.why || '';
+  if (f.said.textContent !== (row.said || '')) f.said.textContent = row.said || '';
+  const left = frame ? frame.left : s.target_lots, cost = frame ? frame.cost : 0;
+  f.left.textContent = left;
+  f.cost.textContent = `${signed(cost)} bps`;
+  f.leftBar.style.width = `${left / s.target_lots * 100}%`;
+  const range = sc.costHi - sc.costLo || 1, at = v => (v - sc.costLo) / range * 100;
+  f.zero.style.left = `${at(0)}%`;
+  f.costBar.style.left = `${at(Math.min(0, cost))}%`;
+  f.costBar.style.width = `${Math.abs(cost) / range * 100}%`;
+  f.root.toggleAttribute('data-split', split);
+}
+
+/* Overview */
+const chart = {svg: $('path'), box: $('chart'), marks: [], w: 0, h: 0};
 function stepped(rows, x, y) {
-  return rows.map((r, i) => i ? `H${x(r[0]).toFixed(1)}V${y(r[1]).toFixed(1)}` : `M${x(r[0]).toFixed(1)} ${y(r[1]).toFixed(1)}`).join("");
+  return rows.map((r, i) => (i ? `H${x(r[0]).toFixed(1)}V${y(r[1]).toFixed(1)}` : `M${x(r[0]).toFixed(1)} ${y(r[1]).toFixed(1)}`)).join('');
+}
+function drawOverview() {
+  const box = chart.box.getBoundingClientRect();
+  if (!box.width || !box.height) return;
+  const s = scene(), sc = scales(s), w = chart.w = Math.round(box.width), h = chart.h = Math.round(box.height), svg = chart.svg;
+  const L = 46, R = 8, T = 8, B = 20, gap = 14, room = h - T - B;
+  const short = room < 300, small = short ? Math.round(room * .22) : Math.round(room * .17);
+  const priceH = short ? room - small - gap : room - small * 2 - gap * 2;
+  const x = chart.x = t => L + (w - L - R) * clamp(t, 0, s.horizon_s) / s.horizon_s;
+  const panel = (top, height, lo, hi) => v => top + height * (hi - v) / (hi - lo || 1);
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.textContent = '';
+  const text = (tx, ty, value, anchor = 'end') => { const n = el('text', {x: tx, y: ty, 'text-anchor': anchor}, svg); n.textContent = value; n.style.cssText = 'font:400 11px var(--sans);fill:var(--muted)'; };
+  const rule = (ry, dash) => el('line', {x1: L, x2: w - R, y1: Math.round(ry) + .5, y2: Math.round(ry) + .5, stroke: '#11151117', 'stroke-dasharray': dash || ''}, svg);
+  /* Price */
+  const y = panel(T, priceH, sc.lo, sc.hi);
+  for (let i = 0; i <= 3; i++) { const v = Math.round(sc.lo + (sc.hi - sc.lo) * (i + .5) / 4); rule(y(v)); text(L - 8, y(v) + 4, v); }
+  const quote = key => [...s.book.map(r => [Math.max(0, r.t), r[key]]), [s.horizon_s, s.book[s.book.length - 1][key]]];
+  const ask = quote('ask'), bid = quote('bid');
+  const band = ask.slice(0, -1).map((r, i) => `M${x(r[0]).toFixed(1)} ${y(r[1]).toFixed(1)}H${x(ask[i + 1][0]).toFixed(1)}V${y(bid[i][1]).toFixed(1)}H${x(r[0]).toFixed(1)}Z`).join('');
+  el('path', {d: band, fill: '#1115110a'}, svg);
+  el('path', {d: stepped(ask, x, y), fill: 'none', stroke: '#11151166', 'stroke-width': 1}, svg);
+  el('path', {d: stepped(bid, x, y), fill: 'none', stroke: '#11151166', 'stroke-width': 1}, svg);
+  const ay = Math.round(y(s.arrival_mid)) + .5;
+  el('line', {x1: L, x2: w - R, y1: ay, y2: ay, stroke: '#8d918e', 'stroke-dasharray': '1 3'}, svg);
+  chart.marks = [];
+  s.policies.forEach((p, i) => p.fills.forEach(f => {
+    const r = clamp(2.5 + Math.sqrt(f.qty) * .5, 3, 6), hollow = f.role === 'maker', cx = x(f.t), cy = y(f.price);
+    const node = i ? el('rect', {x: cx - r, y: cy - r, width: r * 2, height: r * 2, transform: `rotate(45 ${cx.toFixed(1)} ${cy.toFixed(1)})`}, svg) : el('circle', {cx, cy, r}, svg);
+    node.setAttribute('fill', hollow ? '#fff' : INK[i]);
+    node.setAttribute('stroke', INK[i]);
+    node.setAttribute('stroke-width', 1.25);
+    chart.marks.push({node, t: f.t});
+  }));
+  /* Cost and lots, both traders on one axis */
+  const strip = (top, label, lo, hi, series, fmt) => {
+    const sy = panel(top, small, lo, hi);
+    rule(sy(hi)); rule(sy(lo));
+    text(L - 8, sy(hi) + 8, fmt(hi)); text(L - 8, sy(lo), fmt(lo));
+    series.forEach((rows, i) => el('path', {d: stepped(rows, x, sy), fill: 'none', stroke: INK[i], 'stroke-width': 1.5, 'stroke-dasharray': DASH[i]}, svg));
+    text(L + 6, sy(hi) + 13, label, 'start');
+  };
+  const steps = key => s.policies.map(p => [[0, key === 'left' ? s.target_lots : 0], ...p.frames.map(f => [f.t, f[key]]), [s.horizon_s, p.frames[p.frames.length - 1][key]]]);
+  strip(T + priceH + gap, 'Cost so far, bps', sc.costLo, sc.costHi, steps('cost'), v => signed(v, 1));
+  if (!short) strip(T + priceH + gap * 2 + small, 'Lots left', 0, s.target_lots, steps('left'), v => v);
+  for (let t = 0; t <= s.horizon_s; t += 15) text(x(t), h - 4, `${t} s`, t === 0 ? 'start' : t === s.horizon_s ? 'end' : 'middle');
+  const head = $('playhead');
+  head.style.top = `${T}px`;
+  head.style.height = `${room}px`;
+  shown.fills = -2;
 }
 
-function drawMarket() {
-  const s = scene(), W = 640, H = 240, L = 42, R = 8, T = 8, B = 20, book = s.book;
-  const prices = book.flatMap(r => [r.bid, r.ask]).concat(s.policies.flatMap(p => p.fills.map(f => f.price)));
-  const lo = Math.min(...prices) - 1, hi = Math.max(...prices) + 1;
-  const x = t => L + (W - L - R) * t / s.horizon_s, y = v => T + (H - T - B) * (hi - v) / (hi - lo);
-  let out = "";
-  const ticks = 4;
-  for (let i = 0; i <= ticks; i++) {
-    const v = Math.round(lo + (hi - lo) * i / ticks);
-    out += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text class="axis" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
-  }
-  for (let t = 0; t <= s.horizon_s; t += 15) out += `<text class="axis" x="${x(t)}" y="${H - 4}" text-anchor="${t ? (t === s.horizon_s ? "end" : "middle") : "start"}">${t} s</text>`;
-  /* Bid and ask are hairlines. The band between them is the spread a cross must pay. */
-  const quote = key => stepped(book.map(r => [r.t, r[key]]), x, y);
-  out += `<path d="${quote("ask")}" fill="none" stroke="rgba(29,58,42,.38)" stroke-width=".75"/>`;
-  out += `<path d="${quote("bid")}" fill="none" stroke="rgba(29,58,42,.38)" stroke-width=".75"/>`;
-  out += `<line x1="${L}" x2="${W - R}" y1="${y(s.arrival_mid)}" y2="${y(s.arrival_mid)}" stroke="var(--quiet)" stroke-dasharray="1 3"/>`;
-  out += `<text class="axis" x="${W - R}" y="${y(s.arrival_mid) - 5}" text-anchor="end">arrival</text>`;
-  s.policies.forEach((p, i) => {
-    p.fills.forEach(f => {
-      const hollow = f.role === "maker", size = Math.max(3.5, Math.min(7, 2.5 + Math.sqrt(f.qty) * .7));
-      const past = f.t <= now ? 1 : .22;
-      out += `<circle cx="${x(f.t).toFixed(1)}" cy="${y(f.price).toFixed(1)}" r="${size.toFixed(1)}" fill="${hollow ? "#fff" : COLORS[i]}" stroke="${COLORS[i]}" stroke-width="1.5" opacity="${past}"><title>${label(p.name)}: ${f.role} fill, ${f.qty} lots at ${f.price}, ${f.t.toFixed(2)} s</title></circle>`;
-    });
+/* Events */
+function rawLine(e) {
+  const rest = Object.entries(e).filter(([k]) => !['t', 'what', 'move_unfilled', 'move_overall', 'costs', 'rule'].includes(k)).map(([k, v]) => (k === 'intent' ? (v ? v.join(' ') : 'none') : `${k} ${v}`));
+  return [e.what, ...rest].join(' ');
+}
+function buildEvents() {
+  const s = scene(), times = new Map();
+  s.policies.forEach((p, i) => p.events.forEach(e => {
+    if (!times.has(e.t)) times.set(e.t, [[], []]);
+    times.get(e.t)[i].push(rawLine(e));
+  }));
+  const rows = [];
+  [...times.keys()].sort((a, b) => a - b).forEach(t => {
+    const [a, b] = times.get(t);
+    for (let i = 0; i < Math.max(a.length, b.length); i++) rows.push({t, a: a[i] || '', b: b[i] || ''});
   });
-  out += `<line x1="${x(now)}" x2="${x(now)}" y1="${T}" y2="${H - B}" stroke="var(--ink)" stroke-width=".75"/>`;
-  $("market").innerHTML = out;
+  const table = document.createElement('table');
+  table.className = 'log';
+  const name = i => s.policies[i].label;
+  table.innerHTML = `<thead><tr><th class="time" scope="col">Time</th><th scope="col">${name(0)}</th><th scope="col">${name(1)}</th></tr></thead>`;
+  const body = document.createElement('tbody');
+  body.innerHTML = rows.map(r => { const d = r.a !== r.b ? ' class="differs"' : ''; return `<tr><td class="time">${r.t.toFixed(3)}</td><td${d}>${r.a}</td><td${d}>${r.b}</td></tr>`; }).join('');
+  table.appendChild(body);
+  const view = $('view-events');
+  view.textContent = '';
+  view.appendChild(table);
+  state.log = {rows, nodes: [...body.children], at: -1, built: state.scene};
+}
+function paintEvents(t) {
+  const log = state.log;
+  if (!log || log.built !== state.scene) return;
+  const at = indexAt(log.rows, t);
+  if (at === log.at) return;
+  const from = Math.min(at, log.at), to = Math.max(at, log.at);
+  for (let i = Math.max(0, from); i <= to; i++) log.nodes[i].classList.toggle('past', i <= at);
+  if (log.at >= 0) log.nodes[log.at].classList.remove('current');
+  if (at >= 0) log.nodes[at].classList.add('current');
+  log.at = at;
+  if (state.follow && at >= 0) { const view = $('view-events'); view.scrollTop = log.nodes[at].offsetTop - view.clientHeight / 3; }
 }
 
-function lineChart(svg, series, yMax, yMin, format) {
-  const W = 400, H = 104, L = 34, R = 4, T = 6, B = 16, horizon = scene().horizon_s;
-  const x = t => L + (W - L - R) * t / horizon, y = v => T + (H - T - B) * (yMax - v) / (yMax - yMin || 1);
-  let out = "";
-  for (let i = 0; i <= 2; i++) {
-    const v = yMin + (yMax - yMin) * i / 2;
-    out += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text class="axis" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${format(v)}</text>`;
+/* Everything discrete, each redrawn only when its recorded index moves. */
+const shown = {book: -2, frames: [-2, -2], fills: -2, caption: ''};
+function paintDiscrete() {
+  const s = scene(), t = state.now;
+  if (state.mode === 'replay') {
+    const b = Math.max(0, indexAt(s.book, t));
+    if (b !== shown.book && spine.bars) { drawBook(s.book[b]); shown.book = b; }
+    const at = s.policies.map(p => indexAt(p.frames, t));
+    if (at[0] !== shown.frames[0] || at[1] !== shown.frames[1]) {
+      const frames = s.policies.map((p, i) => p.frames[at[i]]);
+      const actions = frames.map(f => f && f.action), split = (actions.includes('REST') && actions.includes('CROSS')) || actions.includes('DONE');
+      frames.forEach((f, i) => { drawFlank(i, f, split); if (spine.marks) drawMark(i, f); });
+      shown.frames = at;
+    }
+  } else if (state.mode === 'overview') {
+    const seen = chart.marks.reduce((n, m) => n + (m.t <= t ? 1 : 0), 0);
+    if (seen !== shown.fills) { chart.marks.forEach(m => m.node.classList.toggle('later', m.t > t)); shown.fills = seen; }
+  } else paintEvents(t);
+  paintCaption();
+}
+
+function stopIndex() {
+  return state.running ? -1 : scene().stops.findIndex(x => Math.abs(x.t - state.now) < 1e-6);
+}
+function paintCaption() {
+  const s = scene(), i = stopIndex(), end = state.now >= s.horizon_s;
+  let text = s.rule, strong = false;
+  if (end) { text = s.result; strong = true; }
+  else if (i >= 0) {
+    const f = s.policies.map(p => p.frames[indexAt(p.frames, state.now)]);
+    const crosser = f[0].action === 'CROSS' ? 0 : 1;
+    text = `Split ${i + 1} of ${s.stops.length}, where ${s.policies[crosser].short} crosses while ${s.policies[1 - crosser].short} rests`;
+    strong = true;
   }
-  series.forEach((rows, i) => { out += `<path d="${stepped(rows, x, y)}" fill="none" stroke="${COLORS[i]}" stroke-width="1.5" stroke-dasharray="${DASHES[i]}"/>`; });
-  out += `<line x1="${x(now)}" x2="${x(now)}" y1="${T}" y2="${H - B}" stroke="var(--ink)" stroke-width=".75"/>`;
-  svg.innerHTML = out;
-}
-
-const lotsLeft = (p, t, total) => p.fills.filter(f => f.t <= t).reduce((left, f) => left - f.qty, total);
-const costAt = (p, t) => { let c = 0; for (const f of p.fills) { if (f.t > t) break; c = f.cost_bps; } return c; };
-function pathOf(p, start, value) {
-  const horizon = scene().horizon_s, rows = [[0, start]];
-  for (const f of p.fills) rows.push([Math.min(f.t, horizon), value(f, rows[rows.length - 1][1])]);
-  rows.push([horizon, rows[rows.length - 1][1]]);
-  return rows;
-}
-
-function queueAt(p) {
-  const q = p.queue.filter(r => r.t <= now).pop();
-  return q && now - q.t <= 1.5 ? q : null;
-}
-
-function drawLadder() {
-  const s = scene(), snap = s.book.filter(r => r.t <= now).pop() || s.book[0];
-  const max = Math.max(...snap.asks.concat(snap.bids).map(l => l[1]), 1);
-  const rung = (side, l) => {
-    const marks = s.policies.map((p, i) => {
-      const q = queueAt(p);
-      if (!q || q.price !== l[0]) return "";
-      const at = Math.min(96, q.ahead / max * 100);
-      return `<i class="mark" title="${label(p.name)}: ${q.ahead} lots ahead" style="left:calc(${at}% - 4px);background:${COLORS[i]}"></i>`;
-    }).join("");
-    return `<div class="rung ${side}"><span>${l[0]}</span><div class="depth"><i style="width:${(l[1] / max * 100).toFixed(1)}%"></i>${marks}</div><span class="num">${l[1]}</span></div>`;
-  };
-  $("ladder").innerHTML = snap.asks.slice(0, 5).reverse().map(l => rung("ask", l)).join("") + `<div class="spread"></div>` + snap.bids.slice(0, 5).map(l => rung("bid", l)).join("");
-}
-
-function traceLine(e) {
-  let text = null;
-  if (e.what === "decision" && e.intent) {
-    const verb = {REST: "Rest", CROSS: "Cross", WAIT: "Wait"}[e.intent[0]] || e.intent[0];
-    text = verb + (e.intent[1] ? ` ${e.intent[1]}` : "") + (e.p_fill !== undefined ? `, fill chance ${(e.p_fill * 100).toFixed(0)}%` : e.rule ? `, ${e.rule}` : "");
+  if (text !== shown.caption) {
+    shown.caption = text;
+    const c = $('caption');
+    c.textContent = text;
+    c.toggleAttribute('data-strong', strong);
+    if (strong) $('status').textContent = text;
   }
-  if (e.what === "fill") text = `${e.role[0].toUpperCase() + e.role.slice(1)} fill, ${e.qty} at ${e.price}`;
-  if (e.what === "rest") text = `In the queue, ${e.queue_ahead} lots ahead`;
-  if (e.what === "cancelled") text = `Cancel landed, ${e.lots} lots pulled`;
-  if (e.what === "complete") text = `Complete, ${e.filled} lots`;
-  return text;
 }
 
-function drawTrace() {
-  const s = scene();
-  $("logs").innerHTML = s.policies.map(p => {
-    const rows = p.events.map(e => [e.t, traceLine(e)]).filter(r => r[1]);
-    const seen = new Set(), unique = rows.filter(r => { const k = r[1].replace(/, fill chance.*/, ""); const key = k + (r[1].startsWith("Rest") ? "" : r[0]); if (seen.has(key)) return false; seen.add(key); return true; });
-    return `<div><h3>${label(p.name)}: event trace</h3><div class="log">${unique.map(r => `<div class="${r[0] <= now ? "past" : ""}"><span>${r[0].toFixed(2)} s</span><span>${r[1]}</span></div>`).join("")}</div></div>`;
-  }).join("");
+/* Continuous: only these move between recorded events. */
+function paintClock() {
+  const s = scene(), p = state.now / s.horizon_s, width = state.scrubWidth;
+  $('thumb').style.transform = `translateX(${(7 + p * (width - 14)).toFixed(2)}px)`;
+  $('done').style.transform = `scaleX(${p.toFixed(5)})`;
+  const clock = `${state.now.toFixed(1)} of ${s.horizon_s} s`;
+  if ($('clock').textContent !== clock) $('clock').textContent = clock;
+  if (state.mode === 'overview' && chart.x) $('playhead').style.transform = `translateX(${chart.x(state.now).toFixed(2)}px)`;
+}
+function setNow(t) {
+  state.now = clamp(t, 0, scene().horizon_s);
+  paintClock();
+  paintDiscrete();
 }
 
-function render() {
-  const s = scene();
-  $("time").max = s.horizon_s;
-  $("clock").textContent = `${now.toFixed(0)} of ${s.horizon_s.toFixed(0)} s`;
-  drawMarket();
-  drawLadder();
-  $("who").innerHTML = s.policies.map((p, i) => {
-    const q = queueAt(p);
-    return `<div class="person"><div class="name"><i class="swatch ${i ? "dashed" : ""}" style="border-color:${COLORS[i]}"></i>${label(p.name)}</div><b>${signed(costAt(p, now))} bps so far</b><span class="sub">Finishes at ${signed(p.shortfall_bps)}. ${lotsLeft(p, now, s.target_lots)} lots left, ${q ? q.ahead + " ahead in queue" : "not resting"}</span></div>`;
-  }).join("");
-  lineChart($("inventory"), s.policies.map(p => pathOf(p, s.target_lots, (f, c) => c - f.qty)), s.target_lots, 0, v => v.toFixed(0));
-  const costs = s.policies.map(p => pathOf(p, 0, f => f.cost_bps));
-  const values = costs.flat().map(r => r[1]).concat([0]);
-  lineChart($("cost"), costs, Math.max(...values), Math.min(...values), v => v.toFixed(1));
+function targets() { const s = scene(); return [s.start, ...s.stops.map(x => x.t), s.horizon_s]; }
+function paintControls() {
+  const s = scene(), end = state.now >= s.horizon_s, label = state.running ? 'pause' : end ? 'replay' : motion.matches ? 'next' : stopIndex() >= 0 ? 'continue' : 'play';
+  document.querySelectorAll('#play .labels > span').forEach(n => n.classList.toggle('on', n.dataset.l === label));
+  $('prev').setAttribute('aria-disabled', state.now <= s.start + 1e-6);
+  $('next').setAttribute('aria-disabled', end);
+  $('time').value = state.now;
+  $('time').setAttribute('aria-valuetext', `${state.now.toFixed(1)} of ${s.horizon_s} seconds`);
+  paintCaption();
 }
 
-function setTime(t) { now = t; $("time").value = t; render(); }
-function pointer(svg, e, left, right, width) {
-  const box = svg.getBoundingClientRect(), a = left / width, b = right / width;
-  const f = ((e.clientX - box.left) / box.width - a) / (1 - a - b);
-  setTime(Math.round(Math.max(0, Math.min(1, f)) * scene().horizon_s));
+function pause() {
+  state.running = false;
+  cancelAnimationFrame(state.raf);
+  paintControls();
 }
-function stop() { clearInterval(timer); timer = null; $("play").textContent = "Play"; }
+function jump(t) {
+  if (state.running) pause();
+  state.follow = true;
+  setNow(t);
+  paintControls();
+}
+function tick() {
+  if (!state.running) return;
+  const stop = targets().slice(1).find(x => x > state.anchorSim + 1e-6);
+  const t = state.anchorSim + (performance.now() - state.anchorWall) / 1000 * RATE;
+  if (t >= stop) { state.running = false; setNow(stop); paintControls(); return; }
+  setNow(t);
+  state.raf = requestAnimationFrame(tick);
+}
+function anchor() { state.anchorWall = performance.now(); state.anchorSim = state.now; }
 function play() {
-  if (timer) return stop();
-  if (now >= scene().horizon_s) setTime(0);
-  $("play").textContent = "Pause";
-  timer = setInterval(() => { now >= scene().horizon_s ? stop() : setTime(now + 1); drawTraceMarks(); }, 260);
-}
-function drawTraceMarks() { drawTrace(); }
-
-function evidence() {
-  const v = DATA.verdict, base = label(DATA.baseline).toLowerCase();
-  $("tiles").innerHTML = DATA.tiles.map(t => `<div class="tile"><b>${t.value}</b><span>${t.label}</span></div>`).join("");
-  $("verdict").textContent = v.sentence;
-  const head = `<div class="row head"><span>Strategy, ${DATA.table.parents} paired orders on ${DATA.table.days} test days</span><span class="n">Mean bps</span><span class="n">P95 bps</span><span class="n">Forced</span></div>`;
-  $("table").innerHTML = head + DATA.table.rows.map(r => `<div class="row ${r.name === "learned" ? "us" : ""}"><span>${label(r.name)}</span><span class="n">${signed(r.mean)}</span><span class="n">${signed(r.p95)}</span><span class="n">${r.forced.toFixed(1)}%</span></div>`).join("");
-  $("table-note").textContent = DATA.table.note;
-  $("checks").innerHTML = DATA.checks.map(c => `<li><span>${c}</span></li>`).join("");
-  $("limits").innerHTML = DATA.limits.map(c => `<li><span>${c}</span></li>`).join("");
-  $("foot").innerHTML = `Generated from run ${DATA.commit.slice(0, 12)} with inputs ${DATA.input_sha256.slice(0, 12)}. Prices in ticks, sizes in lots. All orders simulated. <a href="https://github.com/qbeka/market-replay">Source and full report</a>.`;
+  const s = scene();
+  if (state.running) return pause();
+  if (state.now >= s.horizon_s) { jump(s.start); if (motion.matches) return; }
+  if (motion.matches) return jump(targets().find(x => x > state.now + 1e-6));
+  state.running = true;
+  state.follow = true;
+  anchor();
+  paintControls();
+  state.raf = requestAnimationFrame(tick);
 }
 
-function init() {
-  evidence();
-  $("scenes").innerHTML = DATA.scenes.map((sc, i) => `<button class="pill ghost small" data-i="${i}" aria-pressed="${i === 0}">${sc.title}</button>`).join("");
-  $("scene-rule").textContent = scene().rule;
-  $("scenes").onclick = e => {
-    if (e.target.dataset.i === undefined) return;
-    stop();
-    sceneIndex = +e.target.dataset.i;
-    [...$("scenes").children].forEach((b, i) => b.setAttribute("aria-pressed", i === sceneIndex));
-    $("scene-rule").textContent = scene().rule;
-    now = 0; $("time").value = 0; render(); drawTrace();
-  };
-  $("time").oninput = e => { stop(); now = +e.target.value; render(); drawTrace(); };
-  $("play").onclick = play;
-  $("hero-play").onclick = () => { $("replay").scrollIntoView({behavior: reduceMotion ? "auto" : "smooth"}); if (!timer) { now = 0; play(); } };
-  $("market").addEventListener("pointermove", e => { stop(); pointer($("market"), e, 42, 8, 640); drawTrace(); });
-  for (const id of ["inventory", "cost"]) $(id).addEventListener("pointermove", e => { stop(); pointer($(id), e, 34, 4, 400); drawTrace(); });
-  render(); drawTrace(); drawRidge();
-  addEventListener("resize", drawRidge);
+function loadScene(i) {
+  if (state.running) pause();
+  state.scene = i;
+  const s = scene();
+  [...$('scenes').children].forEach((b, k) => b.setAttribute('aria-pressed', k === i));
+  $('order').textContent = `${s.side === 'buy' ? 'Buy' : 'Sell'} ${s.target_lots} lots within ${s.horizon_s} seconds`;
+  $('time').max = s.horizon_s;
+  s.policies.forEach((p, k) => { flanks[k].name.textContent = p.label; });
+  $('ticks').innerHTML = s.stops.map(x => `<i class="tick" data-t="${x.t}"></i>`).join('');
+  placeTicks();
+  shown.caption = '';
+  state.log = null;
+  refreshView();
+  state.now = s.start;
+  shown.frames = [-2, -2];
+  setNow(s.start);
+  paintControls();
 }
-init();
+function placeTicks() {
+  const width = state.scrubWidth = $('scrub').clientWidth, h = scene().horizon_s;
+  document.querySelectorAll('.tick').forEach(n => { n.style.left = `${(7 + n.dataset.t / h * (width - 14)).toFixed(1)}px`; });
+}
+function refreshView() {
+  if (state.mode === 'replay') layoutSpine();
+  else if (state.mode === 'overview') drawOverview();
+  else if (!state.log) buildEvents();
+}
+function setMode(mode) {
+  state.mode = mode;
+  [...$('modes').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === mode));
+  for (const name of ['replay', 'overview', 'events']) $(`view-${name}`).hidden = name !== mode;
+  state.follow = true;
+  shown.book = shown.fills = -2;
+  shown.frames = [-2, -2];
+  if (state.log) state.log.at = -1, state.log.nodes.forEach(n => n.classList.remove('past', 'current'));
+  refreshView();
+  paintClock();
+  paintDiscrete();
+}
+
+/* Details */
+function details() {
+  $('about').innerHTML = DATA.about.map(p => `<p class="prose">${p}</p>`).join('');
+  $('verdict').textContent = DATA.verdict;
+  $('results').innerHTML = DATA.results.map(r => `<div><dt>${r.name}</dt><dd><b>${r.value}</b>${r.scope}</dd></div>`).join('');
+  $('strategies-scope').textContent = DATA.strategies.scope;
+  $('strategies').innerHTML = `<div><span>Strategy</span><span>Mean</span><span>P95</span><span>Forced</span></div>` + DATA.strategies.rows.map(r => `<div${r.name === 'Learned policy' ? ' data-us' : ''}><span>${r.name}</span><span>${r.mean}</span><span>${r.p95}</span><span>${r.forced}</span></div>`).join('');
+  $('failed').innerHTML = DATA.failed.map(t => `<li>${t}</li>`).join('');
+  $('limits').innerHTML = DATA.limits.map(t => `<li>${t}</li>`).join('');
+}
+
+/* Input */
+$('scenes').innerHTML = DATA.scenes.map((s, i) => `<button class="control" type="button" data-i="${i}" aria-pressed="false">${s.title}</button>`).join('');
+$('scenes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) loadScene(+b.dataset.i); });
+$('modes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.mode); });
+$('play').addEventListener('click', play);
+$('prev').addEventListener('click', () => {
+  const back = targets().filter(x => x < state.now - 1e-3).pop();
+  if (back !== undefined) jump(back);
+});
+$('next').addEventListener('click', () => {
+  const on = targets().find(x => x > state.now + 1e-6);
+  if (on !== undefined) jump(on);
+});
+const time = $('time');
+time.addEventListener('pointerdown', () => { if (state.running) pause(); });
+time.addEventListener('input', () => jump(+time.value));
+time.addEventListener('keydown', e => {
+  const s = scene(), moves = {ArrowLeft: state.now - 1, ArrowDown: state.now - 1, ArrowRight: state.now + 1, ArrowUp: state.now + 1, Home: 0, End: s.horizon_s};
+  if (e.key === ' ') { e.preventDefault(); play(); }
+  else if (e.key === 'PageUp') { e.preventDefault(); $('prev').click(); }
+  else if (e.key === 'PageDown') { e.preventDefault(); $('next').click(); }
+  else if (e.key in moves) { e.preventDefault(); jump(moves[e.key]); }
+});
+const seekFrom = e => { const box = chart.box.getBoundingClientRect(); jump((e.clientX - box.left - 46) / (box.width - 54) * scene().horizon_s); };
+chart.box.addEventListener('pointerdown', e => { chart.box.setPointerCapture(e.pointerId); chart.seeking = true; seekFrom(e); });
+chart.box.addEventListener('pointermove', e => { if (chart.seeking) seekFrom(e); });
+for (const end of ['pointerup', 'pointercancel']) chart.box.addEventListener(end, () => { chart.seeking = false; });
+for (const name of ['wheel', 'touchstart', 'pointerdown']) $('view-events').addEventListener(name, () => { state.follow = false; }, {passive: true});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.running) pause(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && state.running) anchor(); });
+motion.addEventListener('change', () => { if (motion.matches && state.running) pause(); paintControls(); });
+new ResizeObserver(() => { placeTicks(); refreshView(); paintClock(); paintDiscrete(); }).observe(document.querySelector('.stage'));
+
+details();
+loadScene(0);
 </script>
 </body>
 </html>
