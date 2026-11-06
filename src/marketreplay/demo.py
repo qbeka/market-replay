@@ -26,6 +26,8 @@ from .study import REPO, Study, ensure_data, load_day, parents_for_day
 TEMPLATE = REPO / "site" / "template.html"
 OUTPUT = REPO / "site" / "index.html"
 FONT = REPO / "site" / "fonts" / "GeistSerif-Regular.woff2"
+SHORT = {"learned": "Learned", "urgency": "Urgency"}
+SETTLE_S = 0.05  # A decision's own orders land inside this window, at the recorded latency.
 MINUS = "\u2212"
 
 
@@ -185,6 +187,23 @@ def build_frames(name: str, events: list[dict], queue: list[dict], fills: list[d
     return frames
 
 
+def decision_stops(policies: list[dict]) -> list[dict]:
+    """Decisions where one trader rested and the other crossed, once both orders landed."""
+    first, second = ([e for e in p["events"] if e["what"] == "decision"] for p in policies)
+    stops = []
+    for a, b in zip(first, second):
+        if {(e["intent"] or ("HOLD",))[0] for e in (a, b)} == {"REST", "CROSS"}:
+            landed = [f["t"] for p in policies for f in p["frames"] if a["t"] <= f["t"] < a["t"] + SETTLE_S]
+            stops.append({"t": max(landed), "decided": a["t"]})
+    return stops
+
+
+def result_sentence(policies: list[dict]) -> str:
+    learned, other = policies
+    gap = other["shortfall_bps"] - learned["shortfall_bps"]
+    return f"Learned finished {abs(gap):.2f} bps {'better' if gap > 0 else 'worse'} than {other['short']}"
+
+
 def scene_data(study: Study, fitted, scene: dict, baseline: str, limits: dict) -> dict:
     day, parent_id = scene["key"]
     parent = next(p for p in parents_for_day(study, day) if p.parent_id == parent_id)
@@ -220,6 +239,7 @@ def scene_data(study: Study, fitted, scene: dict, baseline: str, limits: dict) -
         policies.append(
             {
                 "name": name,
+                "short": SHORT[name],
                 "shortfall_bps": round(shortfall_bps(run.ledger), 3),
                 "fills": fills,
                 "events": events,
@@ -238,6 +258,8 @@ def scene_data(study: Study, fitted, scene: dict, baseline: str, limits: dict) -
         "book": book,
         "policies": policies,
         "start": max(next(f["t"] for f in p["frames"] if f["rest"] is not None) for p in policies),
+        "stops": decision_stops(policies),
+        "result": result_sentence(policies),
     }
 
 
