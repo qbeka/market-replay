@@ -87,16 +87,18 @@ def scene_data(study: Study, fitted, scene: dict, baseline: str) -> dict:
     work = [(parent, build(fitted, name, parent)) for name in names]
     runs, snapshots = replay_session(load_day(study.plan, day), work, config)
     start, end = parent.start_ns, parent.deadline_ns
+    # The last snapshot before arrival is what the first decision saw.
+    first = max(s.ts_ns for s in snapshots if s.ts_ns <= start and s.bids and s.asks)
     book = [
         {
             "t": round((s.ts_ns - start) / 1e9, 3),
             "bids": [list(level) for level in s.bids],
             "asks": [list(level) for level in s.asks],
-            "bid": s.bids[0][0] if s.bids else None,
-            "ask": s.asks[0][0] if s.asks else None,
+            "bid": s.bids[0][0],
+            "ask": s.asks[0][0],
         }
         for s in snapshots
-        if start <= s.ts_ns <= end and s.bids and s.asks
+        if first <= s.ts_ns <= end and s.bids and s.asks
     ]
     policies = []
     for name, run in zip(names, runs):
