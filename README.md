@@ -21,7 +21,7 @@ Measured on one Apple M5 Pro Mac. Other projects shared the machine, so speed co
 
 ## See it
 
-Open [`site/index.html`](site/index.html) in a browser. It is one file and makes no network requests. Two simulated traders work the same order on the same recorded market, with the book, queue position, decisions, fills, inventory and cost shown side by side.
+[Open the live replay](https://www.qendrimbeka.com/projects/market-replay/index.html), or open [`site/index.html`](site/index.html) offline. It is one file and makes no network requests. Two simulated traders work the same order on the same recorded market, with the book, queue position, decisions, fills, inventory and cost shown side by side.
 
 ## Run it
 
