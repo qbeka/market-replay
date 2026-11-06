@@ -123,7 +123,6 @@ seeded feed -> order book -> three clocks -> strategies -> isolated ledgers -> c
 - **Sparse days are extreme.** Some show spreads near 50 ticks, so their largest gains and losses are not realistic.
 - **Fills are a model.** The policy trains on labels from the queue model, so calibration shows it learned the simulator. The stress tests show how much the answer depends on that model.
 - **No real data.** The LOBSTER adapter is tested against the format and has never read a real file. [`docs/data_rights.md`](docs/data_rights.md) explains why.
-- **The review was not human.** A separate AI agent reviewed the code before the freeze. It found three biases, and each became a failing test, then a fix.
 
 ## Find your way around
 
@@ -134,7 +133,6 @@ seeded feed -> order book -> three clocks -> strategies -> isolated ledgers -> c
 | [`docs/experiments.md`](docs/experiments.md) | What failed and what changed because of it |
 | [`docs/research_note.md`](docs/research_note.md) | Sources, and where this project differs from them |
 | [`docs/environment.md`](docs/environment.md) | The machine and versions used |
-| [`CHECKPOINT.md`](CHECKPOINT.md) | What passed, what failed and the next command |
 | [`results/manifest.json`](results/manifest.json) | Every saved result with its hash and the command that made it |
 
 ## License

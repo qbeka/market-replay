@@ -20502,8 +20502,7 @@
   "140 tests, with 99% line coverage of the engine and 81% overall, starting from a hand-worked trace with an assertion for every book state.",
   "The compiled C replay matches the Python reference byte for byte, with 0 divergences in 100,000 hostile fuzz cases under AddressSanitizer and UBSan.",
   "Strategies receive only delayed data. A test rewrites the future and requires every earlier view to stay identical.",
-  "The hypothesis, split and decision rule were committed before any test day was read. The interval resamples whole days, 34 of them.",
-  "A separate AI review agent found three biases before the freeze. Each one became a failing test, then a fix."
+  "The hypothesis, split and decision rule were committed before any test day was read. The interval resamples whole days, 34 of them."
  ],
  "limits": [
   "Market impact. The feed is fixed, so a simulated order never moves a price and nobody reacts to it.",

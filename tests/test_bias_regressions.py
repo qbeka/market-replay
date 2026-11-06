@@ -1,4 +1,4 @@
-"""Counterexamples from the independent review. Each one failed before its fix."""
+"""Counterexamples for three engine biases. Each one failed before its fix."""
 
 from dataclasses import replace
 
