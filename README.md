@@ -21,7 +21,7 @@ Measured on one Apple M5 Pro Mac. Other projects shared the machine, so speed co
 
 ## See it
 
-[Open the live replay](https://www.qendrimbeka.com/projects/market-replay/index.html), or open [`site/index.html`](site/index.html) offline. It is one file and makes no network requests. Two simulated traders work the same order on the same simulated market. Playback stops wherever one rests while the other crosses, Overview shows the whole market path, and Events shows the raw log.
+[Open the live replay](https://www.qendrimbeka.com/projects/market-replay/), or open [`site/index.html`](site/index.html) offline. It is one file and makes no network requests. Two simulated traders work the same order on the same simulated market. Playback stops wherever one rests while the other crosses, Overview shows the whole market path, and Events shows the raw log.
 
 ## Run it
 
