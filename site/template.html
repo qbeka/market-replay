@@ -300,8 +300,17 @@ body {
   :root { --stage-height: clamp(430px, calc(100svh - 128px), 640px); }
   .title { margin-bottom: 12px; }
   .title h1 { font-size: 32px; line-height: 36px; }
-  .head { flex-direction: column; align-items: stretch; gap: 2px; padding: 4px; }
-  .seg .control { flex: 1 1 auto; padding: 0 6px; }
+  .head { flex-direction: column; align-items: stretch; gap: 0; padding: 4px; }
+  #scenes .control { flex: 1 1 auto; padding: 0 6px; }
+  /* On a phone the view switch is a row of plain words, so only the orders read as tabs. */
+  #modes { gap: 20px; padding: 0 8px; }
+  #modes .control,
+  #modes .control:active { min-height: 36px; padding: 0; background: transparent; color: var(--muted); font-weight: 400; }
+  #modes .control[aria-pressed='true'] { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+  @media (hover: hover) {
+    #modes .control:hover, #modes .control:active,
+    #modes .control[aria-pressed='true']:hover, #modes .control[aria-pressed='true']:active { background: transparent; color: var(--ink); }
+  }
   .strip { flex-direction: column; gap: 0; min-height: 0; padding: 7px 12px; }
   #caption { text-align: left; min-height: 40px; }
   .replay { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
@@ -317,9 +326,10 @@ body {
   .spine { grid-column: 1 / -1; grid-row: 2; border: 0; border-top: 1px solid var(--line); }
   .quote { padding: 4px 12px; line-height: 18px; }
   .plot text { font-size: 12px; }
-  .transport { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 4px; row-gap: 0; padding: 4px 8px 6px; }
-  #prev, #next { display: none; }
-  .scrub { grid-column: 2 / -1; margin: 0 4px 0 10px; }
+  .transport { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); column-gap: 2px; row-gap: 0; padding: 4px 8px 6px; }
+  .scrub { margin: 0 4px 0 8px; }
+  .clock { grid-column: 1 / 4; }
+  .sim { justify-self: end; }
   .clock { min-width: 0; text-align: left; line-height: 18px; }
   .sim { padding: 0; line-height: 18px; }
   .overview { padding: 6px 12px; }
