@@ -326,7 +326,6 @@ body {
   .meter dd { font-size: 14px; line-height: 18px; white-space: nowrap; }
   .spine { grid-column: 1 / -1; grid-row: 2; border: 0; border-top: 1px solid var(--line); }
   .quote { padding: 4px 12px; line-height: 18px; }
-  .plot text { font-size: 12px; }
   .transport { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); column-gap: 2px; row-gap: 0; padding: 4px 8px 6px; }
   .scrub { margin: 0 4px 0 8px; }
   .clock { grid-column: 1 / 4; }
@@ -334,8 +333,8 @@ body {
   .clock { min-width: 0; text-align: left; line-height: 18px; }
   .sim { padding: 0; line-height: 18px; }
   .overview { padding: 6px 12px; }
-  .log .time { width: 52px; padding-left: 8px; }
-  .log td, .log th { padding-left: 4px; padding-right: 4px; font-size: 12px; line-height: 16px; }
+  .log .time { width: 62px; padding-left: 8px; }
+  .log td, .log th { padding-left: 4px; padding-right: 4px; line-height: 18px; }
   .strategies > div { grid-template-columns: minmax(0, 1fr) 56px 56px 52px; column-gap: 8px; }
 }
 @media (max-width: 359px) {
@@ -561,9 +560,9 @@ function drawMark(i, frame) {
   if (i) { mark.node.setAttribute('x', inner - 4); mark.node.setAttribute('y', cy - 4); mark.node.setAttribute('transform', `rotate(45 ${inner} ${cy})`); }
   else { mark.node.setAttribute('cx', inner); mark.node.setAttribute('cy', cy); }
   mark.text.setAttribute('x', i ? w - 8 : 8);
-  mark.text.setAttribute('y', cy < 18 ? cy + 14 : cy - 5);
+  mark.text.setAttribute('y', cy < 20 ? cy + 16 : cy - 5);
   mark.text.textContent = price;
-  if (i) spine.arrival.style.display = Math.abs(cy - spine.arrivalY) < 16 ? 'none' : '';
+  if (i) spine.arrival.style.display = Math.abs(cy - spine.arrivalY) < 18 ? 'none' : '';
 }
 
 function drawFlank(i, frame, split) {
@@ -592,18 +591,18 @@ function drawOverview() {
   const box = chart.box.getBoundingClientRect();
   if (!box.width || !box.height) return;
   const s = scene(), sc = scales(s), w = chart.w = Math.round(box.width), h = chart.h = Math.round(box.height), svg = chart.svg;
-  const L = 46, R = 8, T = 8, B = 20, gap = 14, room = h - T - B;
+  const L = 54, R = 8, T = 8, B = 22, gap = 14, room = h - T - B;
   const short = room < 300, small = short ? Math.round(room * .22) : Math.round(room * .17);
   const priceH = short ? room - small - gap : room - small * 2 - gap * 2;
   const x = chart.x = t => L + (w - L - R) * clamp(t, 0, s.horizon_s) / s.horizon_s;
   const panel = (top, height, lo, hi) => v => top + height * (hi - v) / (hi - lo || 1);
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   svg.textContent = '';
-  const text = (tx, ty, value, anchor = 'end') => { const n = el('text', {x: tx, y: ty, 'text-anchor': anchor}, svg); n.textContent = value; n.style.cssText = 'font:400 12px var(--sans);fill:var(--muted)'; };
+  const text = (tx, ty, value, anchor = 'end') => { const n = el('text', {x: tx, y: ty, 'text-anchor': anchor}, svg); n.textContent = value; n.style.cssText = 'font:400 14px var(--sans);fill:var(--muted)'; };
   const rule = (ry, dash) => el('line', {x1: L, x2: w - R, y1: Math.round(ry) + .5, y2: Math.round(ry) + .5, stroke: '#11151117', 'stroke-dasharray': dash || ''}, svg);
   /* Price */
   const y = panel(T, priceH, sc.lo, sc.hi);
-  for (let i = 0; i <= 3; i++) { const v = Math.round(sc.lo + (sc.hi - sc.lo) * (i + .5) / 4); rule(y(v)); text(L - 8, y(v) + 4, v); }
+  for (let i = 0; i <= 3; i++) { const v = Math.round(sc.lo + (sc.hi - sc.lo) * (i + .5) / 4); rule(y(v)); text(L - 8, y(v) + 5, v); }
   const quote = key => [...s.book.map(r => [Math.max(0, r.t), r[key]]), [s.horizon_s, s.book[s.book.length - 1][key]]];
   const ask = quote('ask'), bid = quote('bid');
   const band = ask.slice(0, -1).map((r, i) => `M${x(r[0]).toFixed(1)} ${y(r[1]).toFixed(1)}H${x(ask[i + 1][0]).toFixed(1)}V${y(bid[i][1]).toFixed(1)}H${x(r[0]).toFixed(1)}Z`).join('');
@@ -625,9 +624,12 @@ function drawOverview() {
   const strip = (top, label, lo, hi, series, fmt) => {
     const sy = panel(top, small, lo, hi);
     rule(sy(hi)); rule(sy(lo));
-    text(L - 8, sy(hi) + 8, fmt(hi)); text(L - 8, sy(lo), fmt(lo));
+    text(L - 8, sy(hi) + 10, fmt(hi)); text(L - 8, sy(lo), fmt(lo));
     series.forEach((rows, i) => el('path', {d: stepped(rows, x, sy), fill: 'none', stroke: INK[i], 'stroke-width': 1.5, 'stroke-dasharray': DASH[i]}, svg));
-    text(L + 6, sy(hi) + 13, label, 'start');
+    text(L + 6, sy(hi) + 15, label, 'start');
+    /* A line that runs through the label would cross its words, so the label sits on a small plate of the chart's own paper. */
+    const name = svg.lastChild, bb = name.getBBox();
+    svg.insertBefore(el('rect', {x: bb.x - 3, y: bb.y - 1, width: bb.width + 6, height: bb.height + 2, rx: 2, fill: '#fbfaf7', 'fill-opacity': .9}, svg), name);
   };
   const steps = key => s.policies.map(p => [[0, key === 'left' ? s.target_lots : 0], ...p.frames.map(f => [f.t, f[key]]), [s.horizon_s, p.frames[p.frames.length - 1][key]]]);
   strip(T + priceH + gap, 'Cost so far, bps', sc.costLo, sc.costHi, steps('cost'), v => signed(v, 1));
