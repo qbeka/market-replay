@@ -793,9 +793,11 @@ function loadScene(i) {
   shown.caption = '';
   state.log = null;
   refreshView();
-  state.now = s.start;
+  // Open on the first split, where the two first differ. Previous goes back to the start.
+  const opening = s.stops.length ? s.stops[0].t : s.start;
+  state.now = opening;
   shown.frames = [-2, -2];
-  setNow(s.start);
+  setNow(opening);
   paintControls();
 }
 function placeTicks() {
