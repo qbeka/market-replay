@@ -864,7 +864,10 @@ for (const name of ['wheel', 'touchstart', 'pointerdown']) $('view-events').addE
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.running) pause(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && state.running) anchor(); });
 motion.addEventListener('change', () => { if (motion.matches && state.running) pause(); paintControls(); });
-new ResizeObserver(() => { placeTicks(); refreshView(); paintClock(); paintDiscrete(); }).observe(document.querySelector('.stage'));
+// The book also changes height when the words beside it do, so it is watched too.
+const resized = new ResizeObserver(() => { placeTicks(); refreshView(); paintClock(); paintDiscrete(); });
+resized.observe(document.querySelector('.stage'));
+resized.observe($('spine'));
 
 details();
 loadScene(0);
